@@ -9,6 +9,7 @@
         "build": "tsup",
         "build:dev": "tsup --watch",
         "build:package": "node tools/prepare-package.js",
+        "build:tsc": "tsc",
         "clear-package": "node tools/clear-package.js",
         "prepublishOnly": "pnpm run build && pnpm build:package",
         "test": "jest",
