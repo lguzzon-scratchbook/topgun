@@ -1,51 +1,56 @@
-import { AsyncStreamEmitter, StreamDemux } from '@topgunbuild/async-stream-emitter';
-import { TGStream } from './stream';
-import { TGSimpleStream, TGStreamState } from './types';
-import { uuidv4 } from '../utils/uuidv4';
+import {
+    AsyncStreamEmitter,
+    StreamDemux
+} from '@topgunbuild/async-stream-emitter'
+import { uuidv4 } from '../utils/uuidv4'
+import { TGStream } from './stream'
+import type { TGSimpleStream, TGStreamState } from './types'
 
-export class TGExchange extends AsyncStreamEmitter<any>
+export class TGExchange extends AsyncStreamEmitter<any> 
 {
-    private readonly _streamDataDemux: StreamDemux<any>;
-    private readonly _streamEventDemux: StreamDemux<any>;
+    private readonly _streamDataDemux: StreamDemux<any>
+    private readonly _streamEventDemux: StreamDemux<any>
     private readonly _streamMap: {
         [key: string]: TGSimpleStream
-    };
+    }
 
     /**
-     * Constructor
-     */
-    constructor()
+   * Constructor
+   */
+    constructor() 
     {
-        super();
-        this._streamMap        = {};
-        this._streamEventDemux = new StreamDemux();
-        this._streamDataDemux  = new StreamDemux();
-
-        (async () =>
+        super()
+        this._streamMap = {}
+        this._streamEventDemux = new StreamDemux()
+        this._streamDataDemux = new StreamDemux()
+        ;(async () => 
         {
-            for await (const { streamName, data } of this.listener('publish'))
+            for await (const { streamName, data } of this.listener('publish')) 
             {
-                if (this._streamMap[streamName])
+                if (this._streamMap[streamName]) 
                 {
-                    this._streamDataDemux.write(streamName, data);
+                    this._streamDataDemux.write(streamName, data)
                 }
             }
-        })();
+        })()
     }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Public methods
     // -----------------------------------------------------------------------------------------------------
 
-    publish(streamName: string, data: any): Promise<void>
+    publish(streamName: string, data: any): Promise<void> 
     {
-        this.emit('publish', { streamName, data });
-        return Promise.resolve();
+        this.emit('publish', { streamName, data })
+        return Promise.resolve()
     }
 
-    stream<T>(streamName: string, attributes: {[key: string]: any} = {}): TGStream<T>
+    stream<T>(
+        streamName: string,
+        attributes: { [key: string]: any } = {}
+    ): TGStream<T> 
     {
-        const channelDataStream = this._streamDataDemux.stream(streamName);
+        const channelDataStream = this._streamDataDemux.stream(streamName)
 
         return new TGStream(
             streamName,
@@ -53,61 +58,64 @@ export class TGExchange extends AsyncStreamEmitter<any>
             this._streamEventDemux,
             channelDataStream,
             attributes
-        );
+        )
     }
 
-    destroy(streamName?: string): void
+    destroy(streamName?: string): void 
     {
-        if (streamName)
+        if (streamName) 
         {
-            const stream = this._streamMap[streamName];
+            const stream = this._streamMap[streamName]
 
-            if (stream)
+            if (stream) 
             {
-                this.#triggerStreamDestroy(stream);
+                this.#triggerStreamDestroy(stream)
             }
 
-            this._streamDataDemux.close(streamName);
+            this._streamDataDemux.close(streamName)
         }
-        else
+        else 
         {
-            Object.keys(this._streamMap).forEach((streamName) =>
+            Object.keys(this._streamMap).forEach((streamName) => 
             {
-                const stream = this._streamMap[streamName];
-                this.#triggerStreamDestroy(stream);
-            });
-            this.closeAllListeners();
-            this._streamDataDemux.closeAll();
-            this._streamEventDemux.closeAll();
+                const stream = this._streamMap[streamName]
+                this.#triggerStreamDestroy(stream)
+            })
+            this.closeAllListeners()
+            this._streamDataDemux.closeAll()
+            this._streamEventDemux.closeAll()
         }
     }
 
-    getStreamState(streamName: string): TGStreamState
+    getStreamState(streamName: string): TGStreamState 
     {
-        const channel = this._streamMap[streamName];
-        if (channel)
+        const channel = this._streamMap[streamName]
+        if (channel) 
         {
-            return channel.state;
+            return channel.state
         }
-        return TGStream.UNSUBSCRIBED;
+        return TGStream.UNSUBSCRIBED
     }
 
-    subscribe<T>(streamName: string = uuidv4(), attributes: {[key: string]: any} = {}): TGStream<T>
+    subscribe<T>(
+        streamName: string = uuidv4(),
+        attributes: { [key: string]: any } = {}
+    ): TGStream<T> 
     {
-        let channel = this._streamMap[streamName];
+        let channel = this._streamMap[streamName]
 
-        if (!channel)
+        if (!channel) 
         {
-            channel                     = {
+            channel = {
                 name : streamName,
                 state: TGStream.PENDING,
                 attributes
-            };
-            this._streamMap[streamName] = channel;
-            this.#triggerStreamSubscribe(channel);
+            }
+            this._streamMap[streamName] = channel
+            this.#triggerStreamSubscribe(channel)
         }
 
-        const channelDataStream = this._streamDataDemux.stream(streamName);
+        const channelDataStream = this._streamDataDemux.stream(streamName)
 
         return new TGStream(
             streamName,
@@ -115,66 +123,69 @@ export class TGExchange extends AsyncStreamEmitter<any>
             this._streamEventDemux,
             channelDataStream,
             attributes
-        );
+        )
     }
 
-    unsubscribe(streamName: string): void
+    unsubscribe(streamName: string): void 
     {
-        const channel = this._streamMap[streamName];
+        const channel = this._streamMap[streamName]
 
-        if (channel)
+        if (channel) 
         {
-            this.#triggerStreamUnsubscribe(channel);
+            this.#triggerStreamUnsubscribe(channel)
         }
     }
 
-    subscriptions(includePending?: boolean): string[]
+    subscriptions(includePending?: boolean): string[] 
     {
-        const subs = [];
-        Object.keys(this._streamMap).forEach((streamName) =>
+        const subs = []
+        Object.keys(this._streamMap).forEach((streamName) => 
         {
-            if (includePending || this._streamMap[streamName].state === TGStream.SUBSCRIBED)
+            if (
+                includePending ||
+        this._streamMap[streamName].state === TGStream.SUBSCRIBED
+            ) 
             {
-                subs.push(streamName);
+                subs.push(streamName)
             }
-        });
-        return subs;
+        })
+        return subs
     }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Private methods
     // -----------------------------------------------------------------------------------------------------
 
-    #triggerStreamDestroy(stream: TGSimpleStream): void
+    #triggerStreamDestroy(stream: TGSimpleStream): void 
     {
-        const streamName = stream.name;
+        const streamName = stream.name
 
-        stream.state = TGStream.DESTROYED;
+        stream.state = TGStream.DESTROYED
 
-        delete this._streamMap[streamName];
-        this._streamEventDemux.write(`${streamName}/destroy`, {});
-        this.emit('destroy', { streamName });
+        delete this._streamMap[streamName]
+        this._streamEventDemux.write(`${streamName}/destroy`, {})
+        this.emit('destroy', { streamName })
     }
 
-    #triggerStreamSubscribe(stream: TGSimpleStream): void
+    #triggerStreamSubscribe(stream: TGSimpleStream): void 
     {
-        const streamName = stream.name;
+        const streamName = stream.name
 
-        stream.state = TGStream.SUBSCRIBED;
+        stream.state = TGStream.SUBSCRIBED
 
-        this._streamEventDemux.write(`${streamName}/subscribe`, {});
-        this.emit('subscribe', { streamName });
+        this._streamEventDemux.write(`${streamName}/subscribe`, {})
+        this.emit('subscribe', { streamName })
     }
 
-    #triggerStreamUnsubscribe(stream: TGSimpleStream): void
+    #triggerStreamUnsubscribe(stream: TGSimpleStream): void 
     {
-        const streamName = stream.name;
+        const streamName = stream.name
 
-        delete this._streamMap[streamName];
-        if (stream.state === TGStream.SUBSCRIBED)
+        delete this._streamMap[streamName]
+        if (stream.state === TGStream.SUBSCRIBED) 
         {
-            this._streamEventDemux.write(`${streamName}/unsubscribe`, {});
-            this.emit('unsubscribe', { streamName });
+            this._streamEventDemux.write(`${streamName}/unsubscribe`, {})
+            this.emit('unsubscribe', { streamName })
         }
     }
 }
