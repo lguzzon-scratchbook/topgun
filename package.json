@@ -13,7 +13,7 @@
         "clear-package": "node tools/clear-package.js",
         "prepublishOnly": "pnpm run build && pnpm build:package",
         "test": "jest",
-        "lint": "eslint \"src/**/*.ts\" --fix && pnpm dlx @biomejs/biome check --apply ./src",
+        "lint": "pnpm dlx @biomejs/biome check --apply ./src ; eslint \"src/**/*.ts\" --fix",
         "prepare": "simple-git-hooks",
         "release": "dotenv release-it --",
         "tarball": "rimraf tar && pnpm pack --pack-destination ./tar"
