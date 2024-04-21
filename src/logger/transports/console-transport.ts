@@ -1,6 +1,6 @@
-import { TGLoggerTransportFunctionType } from '../types';
+import type { TGLoggerTransportFunctionType } from '../types'
 
-const availableColors: Record<string, number|null> = {
+const availableColors: Record<string, number | null> = {
     default      : null,
     black        : 30,
     red          : 31,
@@ -17,58 +17,58 @@ const availableColors: Record<string, number|null> = {
     blueBright   : 94,
     magentaBright: 95,
     cyanBright   : 96,
-    whiteBright  : 97,
-};
+    whiteBright  : 97
+}
 
-const resetColors = '\x1b[0m';
+const resetColors = '\x1b[0m'
 
-export const consoleTransport: TGLoggerTransportFunctionType = (props) =>
+export const consoleTransport: TGLoggerTransportFunctionType = (props) => 
 {
-    if (!props) return false;
+    if (!props) return false
 
-    let msg = props.msg;
-    let color;
+    let msg = props.msg
+    let color
 
     if (
         props.options?.colors &&
-        props.options.colors[props.level] &&
-        availableColors[props.options.colors[props.level]]
-    )
+    props.options.colors[props.level] &&
+    availableColors[props.options.colors[props.level]]
+    ) 
     {
-        color = `\x1b[${availableColors[props.options.colors[props.level]]}m`;
-        msg   = `${color}${msg}${resetColors}`;
+        color = `\x1b[${availableColors[props.options.colors[props.level]]}m`
+        msg = `${color}${msg}${resetColors}`
     }
 
-    if (props.extension && props.options?.extensionColors)
+    if (props.extension && props.options?.extensionColors) 
     {
-        let extensionColor = '\x1b[7m';
+        let extensionColor = '\x1b[7m'
 
         if (
             props.options.extensionColors[props.extension] &&
-            availableColors[props.options.extensionColors[props.extension]]
-        )
+      availableColors[props.options.extensionColors[props.extension]]
+        ) 
         {
             extensionColor = `\x1b[${
                 availableColors[props.options.extensionColors[props.extension]] + 10
-            }m`;
+            }m`
         }
 
-        const extStart = color ? resetColors + extensionColor : extensionColor;
-        const extEnd   = color ? resetColors + color : resetColors;
-        msg          = msg.replace(
+        const extStart = color ? resetColors + extensionColor : extensionColor
+        const extEnd = color ? resetColors + color : resetColors
+        msg = msg.replace(
             props.extension,
             `${extStart} ${props.extension} ${extEnd}`
-        );
+        )
     }
 
-    if (props.options?.consoleFunc)
+    if (props.options?.consoleFunc) 
     {
-        props.options.consoleFunc(msg.trim());
+        props.options.consoleFunc(msg.trim())
     }
-    else
+    else 
     {
-        console.log(msg.trim());
+        console.log(msg.trim())
     }
 
-    return true;
-};
+    return true
+}

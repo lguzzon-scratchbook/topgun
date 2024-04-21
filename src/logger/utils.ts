@@ -1,36 +1,36 @@
-export const asyncFunc = (cb: (...args: any[]) => any): void =>
+export const asyncFunc = (cb: (...args: any[]) => any): void => 
 {
-    setTimeout(() =>
+    setTimeout(() => 
     {
-        return cb();
-    }, 0);
-};
+        return cb()
+    }, 0)
+}
 
-export const stringifyFunc = (msg: any): string =>
+export const stringifyFunc = (msg: any): string => 
 {
-    let stringMsg = '';
-    if (typeof msg === 'string')
+    let stringMsg = ''
+    if (typeof msg === 'string') 
     {
-        stringMsg = msg + ' ';
+        stringMsg = msg + ' '
     }
-    else if (typeof msg === 'function')
+    else if (typeof msg === 'function') 
     {
-        stringMsg = '[function] ';
+        stringMsg = '[function] '
     }
-    else if (msg && msg.stack && msg.message)
+    else if (msg && msg.stack && msg.message) 
     {
-        stringMsg = msg.message + ' ';
+        stringMsg = msg.message + ' '
     }
-    else
+    else 
     {
-        try
+        try 
         {
-            stringMsg = '\n' + JSON.stringify(msg, undefined, 2) + '\n';
+            stringMsg = '\n' + JSON.stringify(msg, undefined, 2) + '\n'
         }
-        catch (error)
+        catch (error) 
         {
-            stringMsg += 'Undefined Message';
+            stringMsg += 'Undefined Message'
         }
     }
-    return stringMsg;
-};
+    return stringMsg
+}

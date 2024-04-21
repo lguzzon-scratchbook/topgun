@@ -1,6 +1,6 @@
-import { asyncFunc, stringifyFunc } from './utils';
-import { consoleTransport } from './transports/console-transport';
-import { TGLoggerOptions } from './types';
+import { consoleTransport } from './transports/console-transport'
+import type { TGLoggerOptions } from './types'
+import { asyncFunc, stringifyFunc } from './utils'
 
 /** Default configuration parameters for logger */
 export const defaultLoggerOptions: TGLoggerOptions = {
@@ -10,8 +10,8 @@ export const defaultLoggerOptions: TGLoggerOptions = {
             debug: null,
             log  : 'greenBright',
             warn : 'yellowBright',
-            error: 'redBright',
-        },
+            error: 'redBright'
+        }
     },
     levels           : ['debug', 'log', 'warn', 'error'],
     async            : false,
@@ -21,5 +21,5 @@ export const defaultLoggerOptions: TGLoggerOptions = {
     printDate        : true,
     dateFormat       : 'time',
     enabled          : false,
-    enabledExtensions: null,
-};
+    enabledExtensions: null
+}

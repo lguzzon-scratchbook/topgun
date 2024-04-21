@@ -1,79 +1,80 @@
-import { isDefined } from '@topgunbuild/typed';
-import {
-    TGLoggerOptions,
+import { isDefined } from '@topgunbuild/typed'
+import { defaultLoggerOptions } from './constants'
+import type {
     TGExtendedLoggerType,
+    TGLoggerLevel,
+    TGLoggerOptions,
     TGLoggerTransportFunctionType,
-    TGLoggerType, TGLoggerLevel
-} from './types';
-import { defaultLoggerOptions } from './constants';
+    TGLoggerType
+} from './types'
 
-export class TGLogger implements TGLoggerType
+export class TGLogger implements TGLoggerType 
 {
-    private readonly _appName: string;
-    private readonly _appId: string|number;
-    private readonly _levels: TGLoggerLevel[];
-    private readonly _transport: TGLoggerTransportFunctionType|TGLoggerTransportFunctionType[];
-    private readonly _transportOptions: any;
-    private readonly _async: boolean;
-    private readonly _asyncFunc: (...args: any[]) => any;
-    private readonly _stringifyFunc: (msg: any) => string;
-    private readonly _dateFormat: string|((date: Date) => string);
-    private readonly _printLevel: boolean;
-    private readonly _printDate: boolean;
-    private _enabled: boolean;
-    private _enabledExtensions: string[]|null                    = null;
-    private _extensions: string[]                                = [];
-    private _extendedLogs: {[key: string]: TGExtendedLoggerType} = {};
-    private _originalConsole?: typeof console;
+    private readonly _appName: string
+    private readonly _appId: string | number
+    private readonly _levels: TGLoggerLevel[]
+    private readonly _transport:
+    | TGLoggerTransportFunctionType
+    | TGLoggerTransportFunctionType[]
+    private readonly _transportOptions: any
+    private readonly _async: boolean
+    private readonly _asyncFunc: (...args: any[]) => any
+    private readonly _stringifyFunc: (msg: any) => string
+    private readonly _dateFormat: string | ((date: Date) => string)
+    private readonly _printLevel: boolean
+    private readonly _printDate: boolean
+    private _enabled: boolean
+    private _enabledExtensions: string[] | null = null
+    private _extensions: string[] = []
+    private _extendedLogs: { [key: string]: TGExtendedLoggerType } = {}
+    private _originalConsole?: typeof console
 
     /**
-     * Constructor
-     */
-    constructor(config: TGLoggerOptions)
+   * Constructor
+   */
+    constructor(config: TGLoggerOptions) 
     {
-        this._appName          = config.appName || 'TopGun';
-        this._appId            = config.appId;
-        this._levels           = config.levels;
-        this._transport        = config.transport;
-        this._transportOptions = config.transportOptions;
+        this._appName = config.appName || 'TopGun'
+        this._appId = config.appId
+        this._levels = config.levels
+        this._transport = config.transport
+        this._transportOptions = config.transportOptions
 
-        this._asyncFunc = config.asyncFunc;
-        this._async     = config.async;
+        this._asyncFunc = config.asyncFunc
+        this._async = config.async
 
-        this._stringifyFunc = config.stringifyFunc;
+        this._stringifyFunc = config.stringifyFunc
 
-        this._dateFormat = config.dateFormat;
+        this._dateFormat = config.dateFormat
 
-        this._printLevel = config.printLevel;
-        this._printDate  = config.printDate;
+        this._printLevel = config.printLevel
+        this._printDate = config.printDate
 
-        this._enabled = config.enabled;
+        this._enabled = config.enabled
 
-        if (Array.isArray(config.enabledExtensions))
+        if (Array.isArray(config.enabledExtensions)) 
         {
-            this._enabledExtensions = config.enabledExtensions;
+            this._enabledExtensions = config.enabledExtensions
         }
-        else if (typeof config.enabledExtensions === 'string')
+        else if (typeof config.enabledExtensions === 'string') 
         {
-            this._enabledExtensions = [config.enabledExtensions];
+            this._enabledExtensions = [config.enabledExtensions]
         }
 
-        /** Bind correct log levels methods */
-        /* eslint-disable-next-line @typescript-eslint/no-this-alias */
-        const _this: any = this;
-
-        this._levels.forEach((level: string) =>
+        this._levels.forEach((level: string) => 
         {
-            if (!['debug', 'log', 'warn', 'error'].includes(level))
+            if (!['debug', 'log', 'warn', 'error'].includes(level)) 
             {
-                throw Error(`[topgun-logs] ERROR: [${level}] wrong level config, levels must be one of 'debug', 'log', 'warn', 'error'`);
+                throw Error(
+                    `[topgun-logs] ERROR: [${level}] wrong level config, levels must be one of 'debug', 'log', 'warn', 'error'`
+                )
             }
-        });
+        })
 
-        defaultLoggerOptions.levels.forEach((level: TGLoggerLevel) =>
+        defaultLoggerOptions.levels.forEach((level: TGLoggerLevel) => 
         {
-            _this[level] = this.#log.bind(this, level, null);
-        }, this);
+            this[level] = this.#log.bind(this, level, null)
+        }, this)
     }
 
     // -----------------------------------------------------------------------------------------------------
@@ -81,351 +82,361 @@ export class TGLogger implements TGLoggerType
     // -----------------------------------------------------------------------------------------------------
 
     /**
-     * Extend logger with a new extension
-     */
-    extend(extension: string): TGExtendedLoggerType
+   * Extend logger with a new extension
+   */
+    extend(extension: string): TGExtendedLoggerType 
     {
-        if (extension === 'console')
+        if (extension === 'console') 
         {
             throw Error(
                 '[topgun-logs:extend] ERROR: you cannot set [console] as extension, use patchConsole instead'
-            );
+            )
         }
-        if (this._extensions.includes(extension))
+        if (this._extensions.includes(extension)) 
         {
-            return this._extendedLogs[extension];
+            return this._extendedLogs[extension]
         }
-        this._extendedLogs[extension] = {};
-        this._extensions.push(extension);
-        const extendedLog = this._extendedLogs[extension];
-        defaultLoggerOptions.levels.forEach((level: TGLoggerLevel) =>
+        this._extendedLogs[extension] = {}
+        this._extensions.push(extension)
+        const extendedLog = this._extendedLogs[extension]
+        defaultLoggerOptions.levels.forEach((level: TGLoggerLevel) => 
         {
-            extendedLog[level]                = (...msgs: any) =>
+            extendedLog[level] = (...msgs: any) => 
             {
-                this.#log(level, extension, ...msgs);
-            };
-            extendedLog['extend']             = (extension: string) =>
+                this.#log(level, extension, ...msgs)
+            }
+            extendedLog['extend'] = (extension: string) => 
             {
                 throw Error(
                     '[topgun-logs] ERROR: you cannot extend a logger from an already extended logger'
-                );
-            };
-            extendedLog['enable']             = () =>
+                )
+            }
+            extendedLog['enable'] = () => 
             {
                 throw Error(
                     '[topgun-logs] ERROR: You cannot enable a logger from extended logger'
-                );
-            };
-            extendedLog['disable']            = () =>
+                )
+            }
+            extendedLog['disable'] = () => 
             {
                 throw Error(
                     '[topgun-logs] ERROR: You cannot disable a logger from extended logger'
-                );
-            };
-            extendedLog['getExtensions']      = () =>
+                )
+            }
+            extendedLog['getExtensions'] = () => 
             {
                 throw Error(
                     '[topgun-logs] ERROR: You cannot get extensions from extended logger'
-                );
-            };
-            extendedLog['patchConsole']       = () =>
+                )
+            }
+            extendedLog['patchConsole'] = () => 
             {
                 throw Error(
                     '[topgun-logs] ERROR: You cannot patch console from extended logger'
-                );
-            };
-            extendedLog['getOriginalConsole'] = () =>
+                )
+            }
+            extendedLog['getOriginalConsole'] = () => 
             {
                 throw Error(
                     '[topgun-logs] ERROR: You cannot get original console from extended logger'
-                );
-            };
-        });
-        return extendedLog;
-    };
+                )
+            }
+        })
+        return extendedLog
+    }
 
     /**
-     * Enable logger or extension
-     */
-    enable(extension?: string): boolean
+   * Enable logger or extension
+   */
+    enable(extension?: string): boolean 
     {
-        if (!extension)
+        if (!extension) 
         {
-            this._enabled = true;
-            return true;
+            this._enabled = true
+            return true
         }
 
-        if (this._extensions.includes(extension))
+        if (this._extensions.includes(extension)) 
         {
-            if (this._enabledExtensions)
+            if (this._enabledExtensions) 
             {
-                if (!this._enabledExtensions.includes(extension))
+                if (!this._enabledExtensions.includes(extension)) 
                 {
-                    this._enabledExtensions.push(extension);
-                    return true;
+                    this._enabledExtensions.push(extension)
+                    return true
                 }
-                else
+                else 
                 {
-                    return true;
+                    return true
                 }
             }
-            else
+            else 
             {
-                this._enabledExtensions = [];
-                this._enabledExtensions.push(extension);
-                return true;
+                this._enabledExtensions = []
+                this._enabledExtensions.push(extension)
+                return true
             }
         }
-        else
+        else 
         {
             throw Error(
                 `[topgun-logs:enable] ERROR: Extension [${extension}] not exist`
-            );
+            )
         }
-    };
+    }
 
     /**
-     * Disable logger or extension
-     */
-    disable(extension?: string): boolean
+   * Disable logger or extension
+   */
+    disable(extension?: string): boolean 
     {
-        if (!extension)
+        if (!extension) 
         {
-            this._enabled = false;
-            return true;
+            this._enabled = false
+            return true
         }
-        if (this._extensions.includes(extension))
+        if (this._extensions.includes(extension)) 
         {
-            if (this._enabledExtensions)
+            if (this._enabledExtensions) 
             {
-                const extIndex = this._enabledExtensions.indexOf(extension);
-                if (extIndex > -1)
+                const extIndex = this._enabledExtensions.indexOf(extension)
+                if (extIndex > -1) 
                 {
-                    this._enabledExtensions.splice(extIndex, 1);
+                    this._enabledExtensions.splice(extIndex, 1)
                 }
-                return true;
+                return true
             }
-            else
+            else 
             {
-                return true;
+                return true
             }
         }
-        else
+        else 
         {
             throw Error(
                 `[topgun-logs:disable] ERROR: Extension [${extension}] not exist`
-            );
+            )
         }
     }
 
     /**
-     * Return all created extensions
-     */
-    getExtensions(): string[]
+   * Return all created extensions
+   */
+    getExtensions(): string[] 
     {
-        return this._extensions;
+        return this._extensions
     }
 
     /**
-     * Monkey Patch global console.log
-     */
-    patchConsole(): void
+   * Monkey Patch global console.log
+   */
+    patchConsole(): void 
     {
-        const extension = 'console';
+        const extension = 'console'
 
-        if (!this._originalConsole)
+        if (!this._originalConsole) 
         {
-            this._originalConsole = console;
+            this._originalConsole = console
         }
 
-        if (!this._transportOptions.consoleFunc)
+        if (!this._transportOptions.consoleFunc) 
         {
-            this._transportOptions.consoleFunc = this._originalConsole.log;
+            this._transportOptions.consoleFunc = this._originalConsole.log
         }
 
-        console['log'] = (...msgs: any) =>
+        console['log'] = (...msgs: any) => 
         {
-            this.#log(this._levels[0], extension, ...msgs);
-        };
+            this.#log(this._levels[0], extension, ...msgs)
+        }
 
-        this._levels.forEach((level: TGLoggerLevel) =>
+        this._levels.forEach((level: TGLoggerLevel) => 
         {
-            if ((console as any)[level])
+            if ((console as any)[level]) 
             {
-                (console as any)[level] = (...msgs: any) =>
+                ;(console as any)[level] = (...msgs: any) => 
                 {
-                    this.#log(level, extension, ...msgs);
-                };
+                    this.#log(level, extension, ...msgs)
+                }
             }
-            else
+            else 
             {
                 this._originalConsole &&
-                this._originalConsole.log(
-                    `[topgun-logs:patchConsole] WARNING: "${level}" method does not exist in console and will not be available`
-                );
+          this._originalConsole.log(
+              `[topgun-logs:patchConsole] WARNING: "${level}" method does not exist in console and will not be available`
+          )
             }
-        });
-    };
+        })
+    }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Private methods
     // -----------------------------------------------------------------------------------------------------
 
     /**
-     * Log messages methods and level filter
-     */
-    #log(level: TGLoggerLevel, extension: string|null, ...msgs: any[]): boolean
+   * Log messages methods and level filter
+   */
+    #log(
+        level: TGLoggerLevel,
+        extension: string | null,
+        ...msgs: any[]
+    ): boolean 
     {
-        if (this._async)
+        if (this._async) 
         {
-            return this._asyncFunc(() =>
+            return this._asyncFunc(() => 
             {
-                this.#sendToTransport(level, extension, msgs);
-            });
+                this.#sendToTransport(level, extension, msgs)
+            })
         }
-        else
+        else 
         {
-            return this.#sendToTransport(level, extension, msgs);
+            return this.#sendToTransport(level, extension, msgs)
         }
     }
 
-    #sendToTransport(level: TGLoggerLevel, extension: string|null, msgs: any): boolean
+    #sendToTransport(
+        level: TGLoggerLevel,
+        extension: string | null,
+        msgs: any
+    ): boolean 
     {
-        if (!this._enabled) return false;
-        if (!this.#isLevelEnabled(level))
+        if (!this._enabled) return false
+        if (!this.#isLevelEnabled(level)) 
         {
-            return false;
+            return false
         }
-        if (extension && !this.#isExtensionEnabled(extension))
+        if (extension && !this.#isExtensionEnabled(extension)) 
         {
-            return false;
+            return false
         }
-        const msg            = this.#formatMsg(level, extension, msgs);
+        const msg = this.#formatMsg(level, extension, msgs)
         const transportProps = {
             msg      : msg,
             rawMsg   : msgs,
             level    : level,
             extension: extension,
-            options  : this._transportOptions,
-        };
-        if (Array.isArray(this._transport))
+            options  : this._transportOptions
+        }
+        if (Array.isArray(this._transport)) 
         {
-            for (let i = 0; i < this._transport.length; i++)
+            for (let i = 0; i < this._transport.length; i++) 
             {
-                this._transport[i](transportProps);
+                this._transport[i](transportProps)
             }
         }
-        else
+        else 
         {
-            this._transport(transportProps);
+            this._transport(transportProps)
         }
-        return true;
+        return true
     }
 
-    #stringifyMsg(msg: any): string
+    #stringifyMsg(msg: any): string 
     {
-        return this._stringifyFunc(msg);
+        return this._stringifyFunc(msg)
     }
 
-    #formatMsg(level: string, extension: string|null, msgs: any): string
+    #formatMsg(level: string, extension: string | null, msgs: any): string 
     {
-        let nameTxt: string = '';
-        if (extension)
+        let nameTxt = ''
+        if (extension) 
         {
-            nameTxt = `${extension} | `;
+            nameTxt = `${extension} | `
         }
 
-        let dateTxt: string = '';
-        if (this._printDate)
+        let dateTxt = ''
+        if (this._printDate) 
         {
-            if (typeof this._dateFormat === 'string')
+            if (typeof this._dateFormat === 'string') 
             {
-                switch (this._dateFormat)
+                switch (this._dateFormat) 
                 {
                 case 'time':
-                    dateTxt = `${new Date().toLocaleTimeString()} | `;
-                    break;
+                    dateTxt = `${new Date().toLocaleTimeString()} | `
+                    break
                 case 'local':
-                    dateTxt = `${new Date().toLocaleString()} | `;
-                    break;
+                    dateTxt = `${new Date().toLocaleString()} | `
+                    break
                 case 'utc':
-                    dateTxt = `${new Date().toUTCString()} | `;
-                    break;
+                    dateTxt = `${new Date().toUTCString()} | `
+                    break
                 case 'iso':
-                    dateTxt = `${new Date().toISOString()} | `;
-                    break;
+                    dateTxt = `${new Date().toISOString()} | `
+                    break
                 default:
-                    break;
+                    break
                 }
             }
-            else if (typeof this._dateFormat === 'function')
+            else if (typeof this._dateFormat === 'function') 
             {
-                dateTxt = this._dateFormat(new Date());
+                dateTxt = this._dateFormat(new Date())
             }
         }
 
-        let levelTxt = '';
-        if (this._printLevel)
+        let levelTxt = ''
+        if (this._printLevel) 
         {
-            levelTxt = `${level.toUpperCase()} : `;
+            levelTxt = `${level.toUpperCase()} : `
         }
 
-        let stringMsg: string = dateTxt + nameTxt + levelTxt;
+        let stringMsg: string = dateTxt + nameTxt + levelTxt
 
-        if (Array.isArray(msgs))
+        if (Array.isArray(msgs)) 
         {
-            for (let i = 0; i < msgs.length; ++i)
+            for (let i = 0; i < msgs.length; ++i) 
             {
-                stringMsg += this.#stringifyMsg(msgs[i]);
+                stringMsg += this.#stringifyMsg(msgs[i])
             }
         }
-        else
+        else 
         {
-            stringMsg += this.#stringifyMsg(msgs);
+            stringMsg += this.#stringifyMsg(msgs)
         }
 
-        const prefix = isDefined(this._appId) ? `[${this._appName}] ${this._appId} | ` : `[${this._appName}] | `;
+        const prefix = isDefined(this._appId)
+            ? `[${this._appName}] ${this._appId} | `
+            : `[${this._appName}] | `
 
-        return (prefix + stringMsg).trim();
-    };
-
-    /**
-     * Return true if level is enabled
-     */
-    #isLevelEnabled(level: TGLoggerLevel): boolean
-    {
-        return this._levels.includes(level);
-    };
+        return (prefix + stringMsg).trim()
+    }
 
     /**
-     * Return true if extension is enabled
-     */
-    #isExtensionEnabled(extension: string): boolean
+   * Return true if level is enabled
+   */
+    #isLevelEnabled(level: TGLoggerLevel): boolean 
     {
-        if (!this._enabledExtensions)
+        return this._levels.includes(level)
+    }
+
+    /**
+   * Return true if extension is enabled
+   */
+    #isExtensionEnabled(extension: string): boolean 
+    {
+        if (!this._enabledExtensions) 
         {
-            return true;
+            return true
         }
 
-        return this._enabledExtensions.includes(extension);
-    };
+        return this._enabledExtensions.includes(extension)
+    }
 }
 
-export const createLogger = <Y extends string>(config?: TGLoggerOptions) =>
+export const createLogger = <Y extends string>(config?: TGLoggerOptions) => 
 {
-    type levelMethods<levels extends string> = {
-        [key in levels]: (...args: unknown[]) => void;
-    };
+  type levelMethods<levels extends string> = {
+      [key in levels]: (...args: unknown[]) => void
+  }
 
-    type loggerType = levelMethods<Y>;
+  type loggerType = levelMethods<Y>
 
-    type extendMethods = {
-        extend: (extension: string) => loggerType;
-    };
+  type extendMethods = {
+      extend: (extension: string) => loggerType
+  }
 
-    const mergedConfig = { ...defaultLoggerOptions, ...config };
+  const mergedConfig = { ...defaultLoggerOptions, ...config }
 
-    return new TGLogger(mergedConfig) as unknown as Omit<TGLogger, 'extend'>&
-    loggerType&
-    extendMethods;
-};
+  return new TGLogger(mergedConfig) as unknown as Omit<TGLogger, 'extend'> &
+  loggerType &
+  extendMethods
+}
