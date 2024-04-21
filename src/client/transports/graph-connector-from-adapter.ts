@@ -1,26 +1,26 @@
-import { TGGet, TGPut, TGGraphAdapter } from '../../types';
-import { TGGraphWireConnector } from './graph-wire-connector';
-import { uuidv4 } from '../../utils/uuidv4';
-import { NOOP } from '../../utils/noop';
+import type { TGGet, TGGraphAdapter, TGPut } from '../../types'
+import { NOOP } from '../../utils/noop'
+import { uuidv4 } from '../../utils/uuidv4'
+import { TGGraphWireConnector } from './graph-wire-connector'
 
-export class TGGraphConnectorFromAdapter extends TGGraphWireConnector
+export class TGGraphConnectorFromAdapter extends TGGraphWireConnector 
 {
-    protected readonly adapter: TGGraphAdapter;
+    protected readonly adapter: TGGraphAdapter
 
     /**
-     * Constructor
-     */
-    constructor(adapter: TGGraphAdapter, name = 'GraphConnectorFromAdapter')
+   * Constructor
+   */
+    constructor(adapter: TGGraphAdapter, name = 'GraphConnectorFromAdapter') 
     {
-        super(name);
-        this.adapter = adapter;
+        super(name)
+        this.adapter = adapter
     }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Public methods
     // -----------------------------------------------------------------------------------------------------
 
-    get({ cb, options, msgId = '' }: TGGet): () => void
+    get({ cb, options, msgId = '' }: TGGet): () => void 
     {
         this.adapter
             .get(options)
@@ -29,61 +29,61 @@ export class TGGraphConnectorFromAdapter extends TGGraphWireConnector
                 '@'  : msgId,
                 'put': graphData
             }))
-            .catch((error) =>
+            .catch((error) => 
             {
-                console.warn(error.stack || error);
+                console.warn(error.stack || error)
 
                 return {
                     '#'  : uuidv4(),
                     '@'  : msgId,
-                    'err': 'Error fetching node',
-                };
-            })
-            .then((msg) =>
-            {
-                this.ingest([msg]);
-                if (cb)
-                {
-                    cb(msg);
+                    'err': 'Error fetching node'
                 }
-            });
+            })
+            .then((msg) => 
+            {
+                this.ingest([msg])
+                if (cb) 
+                {
+                    cb(msg)
+                }
+            })
 
-        return NOOP;
+        return NOOP
     }
 
-    put({ graph, msgId = '', cb }: TGPut): () => void
+    put({ graph, msgId = '', cb }: TGPut): () => void 
     {
         this.adapter
             .put(graph)
-            .then(() =>
+            .then(() => 
             {
                 return {
                     '#'  : uuidv4(),
                     '@'  : msgId,
                     'err': null,
-                    'ok' : true,
-                };
+                    'ok' : true
+                }
             })
-            .catch((error) =>
+            .catch((error) => 
             {
-                console.warn(error.stack || error);
+                console.warn(error.stack || error)
 
                 return {
                     '#'  : uuidv4(),
                     '@'  : msgId,
                     'err': 'Error saving put',
-                    'ok' : false,
-                };
-            })
-            .then((msg) =>
-            {
-                this.ingest([msg]);
-                if (cb)
-                {
-                    cb(msg);
+                    'ok' : false
                 }
-            });
+            })
+            .then((msg) => 
+            {
+                this.ingest([msg])
+                if (cb) 
+                {
+                    cb(msg)
+                }
+            })
 
-        return NOOP;
+        return NOOP
     }
 }

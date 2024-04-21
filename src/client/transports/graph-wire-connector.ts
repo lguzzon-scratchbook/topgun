@@ -1,137 +1,135 @@
-import { TGGet, TGPut, TGMessage, TGMessageCb } from '../../types';
-import { TGGraphConnector } from './graph-connector';
-import { uuidv4 } from '../../utils/uuidv4';
+import type { TGGet, TGMessage, TGMessageCb, TGPut } from '../../types'
+import { uuidv4 } from '../../utils/uuidv4'
+import { TGGraphConnector } from './graph-connector'
 
-export class TGGraphWireConnector extends TGGraphConnector
+export class TGGraphWireConnector extends TGGraphConnector 
 {
     private readonly _callbacks: {
-        [msgId: string]: TGMessageCb;
-    };
+        [msgId: string]: TGMessageCb
+    }
 
     /**
-     * Constructor
-     */
-    constructor(name = 'GraphWireConnector')
+   * Constructor
+   */
+    constructor(name = 'GraphWireConnector') 
     {
-        super(name);
-        this._callbacks = {};
-
-        (async () =>
+        super(name)
+        this._callbacks = {}
+        ;(async () => 
         {
-            for await (const value of this.inputQueue.listener('completed'))
+            for await (const value of this.inputQueue.listener('completed')) 
             {
-                this.#onProcessedInput(value);
+                this.#onProcessedInput(value)
             }
-        })();
+        })()
     }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Public methods
     // -----------------------------------------------------------------------------------------------------
 
-    off(msgId: string): TGGraphWireConnector
+    off(msgId: string): TGGraphWireConnector 
     {
-        super.off(msgId);
-        delete this._callbacks[msgId];
-        return this;
+        super.off(msgId)
+        delete this._callbacks[msgId]
+        return this
     }
 
     /**
-     * Send graph data for one or more nodes
-     *
-     * @returns A function to be called to clean up callback listeners
-     */
-    put({ graph, msgId = '', replyTo = '', cb, originators }: TGPut): () => void
+   * Send graph data for one or more nodes
+   *
+   * @returns A function to be called to clean up callback listeners
+   */
+    put({ graph, msgId = '', replyTo = '', cb, originators }: TGPut): () => void 
     {
-        if (!graph)
+        if (!graph) 
         {
-            return () =>
-            {
-            };
+            return () => 
+            {}
         }
         const msg: TGMessage = {
             put: graph,
             originators
-        };
-        if (msgId)
-        {
-            msg['#'] = msgId;
         }
-        if (replyTo)
+        if (msgId) 
         {
-            msg['@'] = replyTo;
+            msg['#'] = msgId
+        }
+        if (replyTo) 
+        {
+            msg['@'] = replyTo
         }
 
-        return this.req(msg, cb);
+        return this.req(msg, cb)
     }
 
     /**
-     * Request data for a given soul
-     *
-     * @returns A function to be called to clean up callback listeners
-     */
-    get({ cb, msgId = '', options }: TGGet): () => void
+   * Request data for a given soul
+   *
+   * @returns A function to be called to clean up callback listeners
+   */
+    get({ cb, msgId = '', options }: TGGet): () => void 
     {
-        const msg: TGMessage = { get: options };
-        if (msgId)
+        const msg: TGMessage = { get: options }
+        if (msgId) 
         {
-            msg['#'] = msgId;
+            msg['#'] = msgId
         }
 
-        return this.req(msg, cb);
+        return this.req(msg, cb)
     }
 
     /**
-     * Send a message that expects responses via @
-     *
-     * @param msg
-     * @param cb
-     */
-    req(msg: TGMessage, cb?: TGMessageCb): () => void
+   * Send a message that expects responses via @
+   *
+   * @param msg
+   * @param cb
+   */
+    req(msg: TGMessage, cb?: TGMessageCb): () => void 
     {
-        const reqId = (msg['#'] = msg['#'] || uuidv4());
-        if (cb)
+        const reqId = (msg['#'] = msg['#'] || uuidv4())
+        if (cb) 
         {
-            this._callbacks[reqId] = cb;
+            this._callbacks[reqId] = cb
         }
-        this.send([msg]);
-        return () =>
+        this.send([msg])
+        return () => 
         {
-            this.off(reqId);
-        };
+            this.off(reqId)
+        }
     }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Private methods
     // -----------------------------------------------------------------------------------------------------
 
-    #onProcessedInput(msg?: TGMessage): void
+    #onProcessedInput(msg?: TGMessage): void 
     {
-        if (!msg)
+        if (!msg) 
         {
-            return;
+            return
         }
-        const id      = msg['#'];
-        const replyToId = msg['@'];
+        const id = msg['#']
+        const replyToId = msg['@']
 
-        if (msg.put)
+        if (msg.put) 
         {
             this.emit('graphData', {
                 data: msg.put,
                 id,
                 replyToId
-            });
+            })
         }
 
-        if (replyToId)
+        if (replyToId) 
         {
-            const cb = this._callbacks[replyToId];
-            if (cb)
+            const cb = this._callbacks[replyToId]
+            if (cb) 
             {
-                cb(msg);
+                cb(msg)
             }
         }
 
-        this.emit('receiveMessage', msg);
+        this.emit('receiveMessage', msg)
     }
 }

@@ -1,77 +1,83 @@
-import { cloneValue, isEmptyObject, isNumber, isObject, isString, isFunction } from '@topgunbuild/typed';
 import {
+    cloneValue,
+    isEmptyObject,
+    isFunction,
+    isNumber,
+    isObject,
+    isString
+} from '@topgunbuild/typed'
+import { pubFromSoul } from '../../sea'
+import { TGExchange } from '../../stream/exchange'
+import type { TGStream } from '../../stream/stream'
+import type {
     TGCollectionOptions,
     TGData,
     TGMessage,
     TGOnCb,
     TGOptionsGet,
     TGOptionsPut,
-    TGValue,
-} from '../../types';
-import { TGClient } from '../client';
-import { TGGraph } from '../graph/graph';
-import { pubFromSoul } from '../../sea';
-import { assertGetPath, assertOptionsGet } from '../../utils/assert';
-import { getNodeSoul, isNode } from '../../utils/node';
-import { TGLexLink } from './lex-link';
-import { uuidv4 } from '../../utils/uuidv4';
-import { TGStream } from '../../stream/stream';
-import { TGExchange } from '../../stream/exchange';
-import { createSoul, isMessage } from '../../utils';
+    TGValue
+} from '../../types'
+import { createSoul, isMessage } from '../../utils'
+import { assertGetPath, assertOptionsGet } from '../../utils/assert'
+import { getNodeSoul, isNode } from '../../utils/node'
+import { uuidv4 } from '../../utils/uuidv4'
+import type { TGClient } from '../client'
+import type { TGGraph } from '../graph/graph'
+import { TGLexLink } from './lex-link'
 
-export class TGLink
+export class TGLink 
 {
-    readonly id: string;
-    key: string;
-    soul: string|undefined;
-    _lex?: TGLexLink;
+    readonly id: string
+    key: string
+    soul: string | undefined
+    _lex?: TGLexLink
 
-    protected readonly _client: TGClient;
-    protected readonly _parent?: TGLink;
-    protected readonly _exchange: TGExchange;
+    protected readonly _client: TGClient
+    protected readonly _parent?: TGLink
+    protected readonly _exchange: TGExchange
     protected _receivedData: {
         [streamName: string]: {
             [soul: string]: TGValue
         }
-    };
+    }
     protected _endQueries?: {
         [streamName: string]: () => void
-    };
+    }
 
     /**
-     * Constructor
-     */
-    constructor(client: TGClient, key: string, parent?: TGLink)
+   * Constructor
+   */
+    constructor(client: TGClient, key: string, parent?: TGLink) 
     {
-        this.id            = uuidv4();
-        this.key           = key;
-        this._client       = client;
-        this._parent       = parent;
-        this._exchange     = new TGExchange();
-        this._receivedData = {};
-        this._endQueries   = {};
-        if (!parent)
+        this.id = uuidv4()
+        this.key = key
+        this._client = client
+        this._parent = parent
+        this._exchange = new TGExchange()
+        this._receivedData = {}
+        this._endQueries = {}
+        if (!parent) 
         {
-            this.soul = key;
+            this.soul = key
 
             // If this is user space
-            if (key.startsWith('~') && pubFromSoul(key))
+            if (key.startsWith('~') && pubFromSoul(key)) 
             {
-                this._client.pub = pubFromSoul(key);
+                this._client.pub = pubFromSoul(key)
             }
         }
-
-        (async () =>
+        ;(async () => 
         {
             // Unsubscribe from requests when link is destroyed
-            for await (const { streamName } of this._exchange.listener('destroy'))
+            for await (const { streamName } of this._exchange.listener('destroy')) 
             {
-                if (isFunction(this._endQueries[streamName]))
+                if (isFunction(this._endQueries[streamName])) 
                 {
-                    this._endQueries[streamName]();
+                    this._endQueries[streamName]()
                 }
             }
-        })();
+        })()
     }
 
     // -----------------------------------------------------------------------------------------------------
@@ -79,459 +85,461 @@ export class TGLink
     // -----------------------------------------------------------------------------------------------------
 
     /**
-     * True, if link requires user authorization
-     */
-    authRequired(): boolean
+   * True, if link requires user authorization
+   */
+    authRequired(): boolean 
     {
-        if (this._client.user().is?.pub)
+        if (this._client.user().is?.pub) 
         {
-            if (this.userPubExpected())
+            if (this.userPubExpected()) 
             {
-                this.__setUserPub(this._client.user().is?.pub);
+                this.__setUserPub(this._client.user().is?.pub)
             }
-            return false;
+            return false
         }
-        return this.userPubExpected();
+        return this.userPubExpected()
     }
 
     /**
-     * True, if the user’s public key has not yet been recorded in the path
-     */
-    userPubExpected(): boolean
+   * True, if the user’s public key has not yet been recorded in the path
+   */
+    userPubExpected(): boolean 
     {
-        return this.getPath().some(path => path.includes(this._client.WAIT_FOR_USER_PUB));
+        return this.getPath().some(path =>
+            path.includes(this._client.WAIT_FOR_USER_PUB)
+        )
     }
 
     /**
-     * Graph from the current chain link
-     */
-    getGraph(): TGGraph
+   * Graph from the current chain link
+   */
+    getGraph(): TGGraph 
     {
-        return this._client.graph;
+        return this._client.graph
     }
 
     /**
-     * @returns path of this node
-     */
-    getPath(): string[]
+   * @returns path of this node
+   */
+    getPath(): string[] 
     {
-        if (this._parent)
+        if (this._parent) 
         {
-            return [...this._parent.getPath(), this.key];
+            return [...this._parent.getPath(), this.key]
         }
 
-        return [this.key];
+        return [this.key]
     }
 
-    getSoul(): string
+    getSoul(): string 
     {
-        return createSoul(
-            ...this.getPath()
-        );
-    }
-
-    /**
-     * Traverse a location in the graph
-     */
-    get(query: TGOptionsGet): TGLexLink;
-    get(key: string): TGLink;
-    get(keyOrOptions: string|TGOptionsGet): TGLink|TGLexLink
-    {
-        // The argument is a LEX query
-        if (isObject(keyOrOptions))
-        {
-            return new TGLexLink(this, this._client.options.transportMaxKeyValuePairs, assertOptionsGet(keyOrOptions));
-        }
-        else if (isString(keyOrOptions))
-        {
-            return new TGLink(this._client, assertGetPath(keyOrOptions), this);
-        }
-        else
-        {
-            throw Error('Get path must be string or query object.');
-        }
+        return createSoul(...this.getPath())
     }
 
     /**
-     * Move up to the parent context on the chain.
-     *
-     * Every time a new chain is created, a reference to the old context is kept to go back to.
-     */
-    back(amount = 1): TGLink|TGClient
+   * Traverse a location in the graph
+   */
+    get(query: TGOptionsGet): TGLexLink
+    get(key: string): TGLink
+    get(keyOrOptions: string | TGOptionsGet): TGLink | TGLexLink 
     {
-        if (amount < 0 || amount === Infinity)
+    // The argument is a LEX query
+        if (isObject(keyOrOptions)) 
         {
-            return this._client;
+            return new TGLexLink(
+                this,
+                this._client.options.transportMaxKeyValuePairs,
+                assertOptionsGet(keyOrOptions)
+            )
         }
-        if (amount === 1)
+        else if (isString(keyOrOptions)) 
         {
-            return this._parent || this._client;
+            return new TGLink(this._client, assertGetPath(keyOrOptions), this)
         }
-        return this._parent.back(amount - 1);
+        else 
+        {
+            throw Error('Get path must be string or query object.')
+        }
     }
 
     /**
-     * Set null data instead of node at this path
-     */
-    async remove(opt?: TGOptionsPut): Promise<void>
+   * Move up to the parent context on the chain.
+   *
+   * Every time a new chain is created, a reference to the old context is kept to go back to.
+   */
+    back(amount = 1): TGLink | TGClient 
     {
-        const cb = () =>
+        if (amount < 0 || amount === Number.POSITIVE_INFINITY) 
         {
-        };
-
-        await this._client.graph.putPath(
-            [
-                this.getPath().join('/')
-            ],
-            null,
-            cb,
-            opt
-        );
+            return this._client
+        }
+        if (amount === 1) 
+        {
+            return this._parent || this._client
+        }
+        return this._parent.back(amount - 1)
     }
 
     /**
-     * Save data into topGun, syncing it with your connected peers.
-     *
-     * You do not need to re-save the entire object every time, TopGun will automatically
-     * merge your data into what already exists as a "partial" update.
-     **/
-    put(value: TGValue|TGLink, opt?: TGOptionsPut): Promise<TGMessage>
+   * Set null data instead of node at this path
+   */
+    async remove(opt?: TGOptionsPut): Promise<void> 
     {
-        return new Promise<TGMessage>((resolve) =>
+        const cb = () => 
+        {}
+
+        await this._client.graph.putPath([this.getPath().join('/')], null, cb, opt)
+    }
+
+    /**
+   * Save data into topGun, syncing it with your connected peers.
+   *
+   * You do not need to re-save the entire object every time, TopGun will automatically
+   * merge your data into what already exists as a "partial" update.
+   **/
+    put(value: TGValue | TGLink, opt?: TGOptionsPut): Promise<TGMessage> 
+    {
+        return new Promise<TGMessage>((resolve) => 
         {
-            if (this.authRequired())
+            if (this.authRequired()) 
             {
                 throw new Error(
-                    'You cannot save data to user space if the user is not authorized.',
-                );
+                    'You cannot save data to user space if the user is not authorized.'
+                )
             }
-            else if (!this._parent && (!isObject(value) && value !== null))
+            else if (!this._parent && !isObject(value) && value !== null) 
             {
                 throw new Error(
-                    'Data at root of graph must be a node (an object) or null.',
-                );
+                    'Data at root of graph must be a node (an object) or null.'
+                )
             }
-            else if (value instanceof TGLink)
+            else if (value instanceof TGLink) 
             {
-                if (value.getPath().length > 2)
+                if (value.getPath().length > 2) 
                 {
-                    throw new Error('Data at root of graph must be a node (an object) or null.');
+                    throw new Error(
+                        'Data at root of graph must be a node (an object) or null.'
+                    )
                 }
-                value = { '#': value.getPath().join('/') };
+                value = { '#': value.getPath().join('/') }
             }
-            else if (isMessage(value))
+            else if (isMessage(value)) 
             {
-                value = { '#': value['#'] };
+                value = { '#': value['#'] }
             }
 
-            this._client.graph.putPath(
-                this.getPath(),
-                value,
-                resolve,
-                opt,
-            );
+            this._client.graph.putPath(this.getPath(), value, resolve, opt)
         })
     }
 
     /**
-     * Add a unique item to an unordered list
-     */
-    set(data: TGValue, opt?: TGOptionsPut): Promise<TGMessage>
+   * Add a unique item to an unordered list
+   */
+    set(data: TGValue, opt?: TGOptionsPut): Promise<TGMessage> 
     {
-        return new Promise<TGMessage>((resolve) =>
+        return new Promise<TGMessage>((resolve) => 
         {
-            let value = cloneValue(data);
+            let value = cloneValue(data)
 
-            if (!isObject(value) || isEmptyObject(value))
+            if (!isObject(value) || isEmptyObject(value)) 
             {
-                throw new Error('This data type is not supported in set().');
+                throw new Error('This data type is not supported in set().')
             }
-            else if (this.authRequired())
+            else if (this.authRequired()) 
             {
                 throw new Error(
-                    'You cannot save data to user space if the user is not authorized.',
-                );
+                    'You cannot save data to user space if the user is not authorized.'
+                )
             }
 
-            if (data instanceof TGLink)
+            if (data instanceof TGLink) 
             {
-                if (data.getPath().length === 0)
+                if (data.getPath().length === 0) 
                 {
-                    throw new Error('Link is empty.');
+                    throw new Error('Link is empty.')
                 }
 
-                value = { '#': data.getSoul() };
+                value = { '#': data.getSoul() }
             }
-            else if (isMessage(data))
+            else if (isMessage(data)) 
             {
-                value = { '#': data['#'] };
+                value = { '#': data['#'] }
             }
-            else if (isNode(data))
+            else if (isNode(data)) 
             {
-                delete data['_'];
+                delete data['_']
             }
 
-            const pathArr = [
-                createSoul(...this.getPath(), uuidv4())
-            ];
+            const pathArr = [createSoul(...this.getPath(), uuidv4())]
 
-            this._client.graph.putPath(
-                pathArr,
-                value,
-                resolve,
-                opt,
-            );
-        });
+            this._client.graph.putPath(pathArr, value, resolve, opt)
+        })
     }
 
     /**
-     * Get the current data without subscribing to updates
-     */
-    once<T extends TGValue>(cb?: TGOnCb<T>): TGStream<TGData<T>>
+   * Get the current data without subscribing to updates
+   */
+    once<T extends TGValue>(cb?: TGOnCb<T>): TGStream<TGData<T>> 
     {
         const stream = this.#createQueryStream<T>({
             once            : true,
             topGunCollection: this.#collectionQuery()
-        });
+        })
 
-        if (isFunction(cb))
+        if (isFunction(cb)) 
         {
             // Get data for callback function
-            (async () =>
+            ;(async () => 
             {
-                for await (const { value, key } of stream)
+                for await (const { value, key } of stream) 
                 {
-                    cb(value, key);
+                    cb(value, key)
 
                     // Destroy query for one element after the result is received
-                    if (!this.#collectionQuery())
+                    if (!this.#collectionQuery()) 
                     {
-                        stream.destroy();
+                        stream.destroy()
                     }
                 }
-            })();
+            })()
         }
 
-        return this.#collectionQuery() ? this.#onMap(stream) : this.#on(stream);
+        return this.#collectionQuery() ? this.#onMap(stream) : this.#on(stream)
     }
 
     /**
-     * Subscribe to updates and changes on a node or property in realtime
-     */
-    on<T extends TGValue>(cb?: TGOnCb<T>): TGStream<TGData<T>>
+   * Subscribe to updates and changes on a node or property in realtime
+   */
+    on<T extends TGValue>(cb?: TGOnCb<T>): TGStream<TGData<T>> 
     {
         const stream = this.#createQueryStream<T>({
             topGunCollection: this.#collectionQuery()
-        });
+        })
 
-        if (isFunction(cb))
+        if (isFunction(cb)) 
         {
             // Get data for callback function
-            (async () =>
+            ;(async () => 
             {
-                for await (const { value, key } of stream)
+                for await (const { value, key } of stream) 
                 {
-                    cb(value, key);
+                    cb(value, key)
                 }
-            })();
+            })()
         }
 
-        return this.#collectionQuery() ? this.#onMap(stream) : this.#on(stream);
+        return this.#collectionQuery() ? this.#onMap(stream) : this.#on(stream)
     }
 
     /**
-     * Destroy all queries
-     */
-    off(): void
+   * Destroy all queries
+   */
+    off(): void 
     {
-        this._exchange.destroy();
-        this._receivedData = {};
-        this._endQueries   = {};
+        this._exchange.destroy()
+        this._receivedData = {}
+        this._endQueries = {}
     }
 
     /**
-     * Get current data once as a promise
-     */
-    promise<T extends TGValue>(opts?: {timeout?: number}): Promise<T>
+   * Get current data once as a promise
+   */
+    promise<T extends TGValue>(opts?: { timeout?: number }): Promise<T> 
     {
-        return new Promise<T>((resolve, reject) =>
+        return new Promise<T>((resolve, reject) => 
         {
-            if (this.#collectionQuery())
+            if (this.#collectionQuery()) 
             {
-                return reject(Error('For multiple use once() or on() method'));
+                return reject(Error('For multiple use once() or on() method'))
             }
 
-            const stream = this.#createQueryStream<T>({ once: true });
-
-            (async () =>
+            const stream = this.#createQueryStream<T>({ once: true })
+      ;(async () => 
             {
-                for await (const { value } of this.#on(stream))
+                for await (const { value } of this.#on(stream)) 
                 {
-                    resolve(value);
-                    stream.destroy();
+                    resolve(value)
+                    stream.destroy()
                 }
-            })();
+            })()
 
             // Set termination timeout if there are no connectors
-            if (this._client.connectors().length === 0 && !isNumber(opts?.timeout))
+            if (this._client.connectors().length === 0 && !isNumber(opts?.timeout)) 
             {
-                if (!isObject(opts))
+                if (!isObject(opts)) 
                 {
-                    opts = {};
+                    opts = {}
                 }
-                opts.timeout = 50;
+                opts.timeout = 50
             }
 
             // End after timeout
-            if (isNumber(opts?.timeout))
+            if (isNumber(opts?.timeout)) 
             {
-                setTimeout(() =>
+                setTimeout(() => 
                 {
-                    if (stream.state !== 'destroyed')
+                    if (stream.state !== 'destroyed') 
                     {
-                        stream.destroy();
-                        resolve(undefined);
+                        stream.destroy()
+                        resolve(undefined)
                     }
-                }, opts.timeout);
+                }, opts.timeout)
             }
-        });
+        })
     }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Public methods for collections
     // -----------------------------------------------------------------------------------------------------
 
-    collection(collectionOptions: TGCollectionOptions = {}): TGLexLink
+    collection(collectionOptions: TGCollectionOptions = {}): TGLexLink 
     {
-        return new TGLexLink(this, this._client.options.transportMaxKeyValuePairs).collection(collectionOptions);
+        return new TGLexLink(
+            this,
+            this._client.options.transportMaxKeyValuePairs
+        ).collection(collectionOptions)
     }
 
-    start(value: string): TGLexLink
+    start(value: string): TGLexLink 
     {
-        return this.collection().start(value);
+        return this.collection().start(value)
     }
 
-    end(value: string): TGLexLink
+    end(value: string): TGLexLink 
     {
-        return this.collection().end(value);
+        return this.collection().end(value)
     }
 
-    prefix(value: string): TGLexLink
+    prefix(value: string): TGLexLink 
     {
-        return this.collection().prefix(value);
+        return this.collection().prefix(value)
     }
 
-    limit(value: number): TGLexLink
+    limit(value: number): TGLexLink 
     {
-        return this.collection().limit(value);
+        return this.collection().limit(value)
     }
 
-    reverse(value = true): TGLexLink
+    reverse(value = true): TGLexLink 
     {
-        return this.collection().reverse(value);
+        return this.collection().reverse(value)
     }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Private methods
     // -----------------------------------------------------------------------------------------------------
 
-    __setUserPub(pub: string): void
+    __setUserPub(pub: string): void 
     {
-        if (this._parent)
+        if (this._parent) 
         {
-            this._parent.__setUserPub(pub);
+            this._parent.__setUserPub(pub)
         }
 
-        this._client.pub = pub;
-        this.key         = this.key.replace(this._client.WAIT_FOR_USER_PUB, pub);
+        this._client.pub = pub
+        this.key = this.key.replace(this._client.WAIT_FOR_USER_PUB, pub)
 
         if (
             this._lex instanceof TGLexLink &&
-            isObject(this._lex.options) &&
-            isString(this._lex.options['#'])
-        )
+      isObject(this._lex.options) &&
+      isString(this._lex.options['#'])
+        ) 
         {
-            this._lex.options['#'] = this._lex.options['#'].replace(this._client.WAIT_FOR_USER_PUB, pub);
+            this._lex.options['#'] = this._lex.options['#'].replace(
+                this._client.WAIT_FOR_USER_PUB,
+                pub
+            )
         }
     }
 
-    #createQueryStream<T>(attributes?: {[key: string]: any}): TGStream<TGData<T>>
+    #createQueryStream<T>(attributes?: { [key: string]: any }): TGStream<
+    TGData<T>
+    > 
     {
-        return this._exchange.subscribe<TGData<T>>(uuidv4(), attributes);
+        return this._exchange.subscribe<TGData<T>>(uuidv4(), attributes)
     }
 
-    #collectionQuery(): TGCollectionOptions
+    #collectionQuery(): TGCollectionOptions 
     {
-        return this._lex instanceof TGLexLink && this._lex.collectionOptions;
+        return this._lex instanceof TGLexLink && this._lex.collectionOptions
     }
 
-    #onQueryResponse<T extends TGValue>(value: T, soul: string, stream: TGStream<TGData<T>>): void
+    #onQueryResponse<T extends TGValue>(
+        value: T,
+        soul: string,
+        stream: TGStream<TGData<T>>
+    ): void 
     {
-        const key = soul || getNodeSoul(value) || this.key;
+        const key = soul || getNodeSoul(value) || this.key
 
         // Handle once query
         // Break when data for the current key has already been received
-        if (stream.attributes['once'])
+        if (stream.attributes['once']) 
         {
-            if (!isObject(this._receivedData[stream.name]))
+            if (!isObject(this._receivedData[stream.name])) 
             {
-                this._receivedData[stream.name] = {};
+                this._receivedData[stream.name] = {}
             }
-            if (this._receivedData[stream.name][key])
+            if (this._receivedData[stream.name][key]) 
             {
-                return;
+                return
             }
-            this._receivedData[stream.name][key] = value;
+            this._receivedData[stream.name][key] = value
         }
 
-        stream.publish({ value, key });
+        stream.publish({ value, key })
     }
 
-    #on<T extends TGValue>(stream: TGStream<TGData<T>>): TGStream<TGData<T>>
+    #on<T extends TGValue>(stream: TGStream<TGData<T>>): TGStream<TGData<T>> 
     {
-        this.#maybeWaitAuth(() =>
+        this.#maybeWaitAuth(() => 
         {
             this._endQueries[stream.name] = this._client.graph.query(
                 this.getPath(),
-                (value: TGValue, soul: string) => this.#onQueryResponse(value, soul, stream),
+                (value: TGValue, soul: string) =>
+                    this.#onQueryResponse(value, soul, stream),
                 stream.name,
                 !!stream.attributes['once']
-            );
-        });
+            )
+        })
 
-        return stream;
+        return stream
     }
 
-    #onMap<T extends TGValue>(stream: TGStream<TGData<T>>): TGStream<TGData<T>>
+    #onMap<T extends TGValue>(stream: TGStream<TGData<T>>): TGStream<TGData<T>> 
     {
-        this.#maybeWaitAuth(() =>
+        this.#maybeWaitAuth(() => 
         {
             this._endQueries[stream.name] = this._client.graph.queryMany(
                 this._lex.options,
-                (value: TGValue, soul: string) => this.#onQueryResponse(value, soul, stream),
+                (value: TGValue, soul: string) =>
+                    this.#onQueryResponse(value, soul, stream),
                 stream.name,
                 !!stream.attributes['once']
-            );
-        });
+            )
+        })
 
-        return stream;
+        return stream
     }
 
-    #maybeWaitAuth(handler: () => void): TGLink
+    #maybeWaitAuth(handler: () => void): TGLink 
     {
-        if (this.authRequired())
+        if (this.authRequired()) 
         {
-            this._client.listener('auth').once().then((value) =>
-            {
-                this.__setUserPub(value.pub);
-                handler();
-            });
+            this._client
+                .listener('auth')
+                .once()
+                .then((value) => 
+                {
+                    this.__setUserPub(value.pub)
+                    handler()
+                })
         }
-        else
+        else 
         {
-            handler();
+            handler()
         }
 
-        return this;
+        return this
     }
 }

@@ -1,15 +1,17 @@
-export class TGMiddlewareSystem<T, U = undefined, V = undefined>
+export class TGMiddlewareSystem<T, U = undefined, V = undefined> 
 {
-    readonly name: string;
-    private readonly _middlewareFunctions: Array<(a: T, b?: U, c?: V) => Promise<T>|T|undefined>;
+    readonly name: string
+    private readonly _middlewareFunctions: Array<
+    (a: T, b?: U, c?: V) => Promise<T> | T | undefined
+    >
 
     /**
-     * Constructor
-     */
-    constructor(name = 'MiddlewareSystem')
+   * Constructor
+   */
+    constructor(name = 'MiddlewareSystem') 
     {
-        this.name                 = name;
-        this._middlewareFunctions = [];
+        this.name = name
+        this._middlewareFunctions = []
     }
 
     // -----------------------------------------------------------------------------------------------------
@@ -17,61 +19,61 @@ export class TGMiddlewareSystem<T, U = undefined, V = undefined>
     // -----------------------------------------------------------------------------------------------------
 
     /**
-     * Register middleware function
-     *
-     * @param middleware The middleware function to add
-     */
+   * Register middleware function
+   *
+   * @param middleware The middleware function to add
+   */
     use(
-        middleware: (a: T, b?: U, c?: V) => Promise<T>|T|undefined,
-    ): TGMiddlewareSystem<T, U, V>
+        middleware: (a: T, b?: U, c?: V) => Promise<T> | T | undefined
+    ): TGMiddlewareSystem<T, U, V> 
     {
-        if (this._middlewareFunctions.indexOf(middleware) !== -1)
+        if (this._middlewareFunctions.indexOf(middleware) !== -1) 
         {
-            return this;
+            return this
         }
 
-        this._middlewareFunctions.push(middleware);
-        return this;
+        this._middlewareFunctions.push(middleware)
+        return this
     }
 
     /**
-     * Unregister middleware function
-     *
-     * @param middleware The middleware function to remove
-     */
+   * Unregister middleware function
+   *
+   * @param middleware The middleware function to remove
+   */
     unuse(
-        middleware: (a: T, b?: U, c?: V) => T|undefined,
-    ): TGMiddlewareSystem<T, U, V>
+        middleware: (a: T, b?: U, c?: V) => T | undefined
+    ): TGMiddlewareSystem<T, U, V> 
     {
-        const idx = this._middlewareFunctions.indexOf(middleware);
-        if (idx !== -1)
+        const idx = this._middlewareFunctions.indexOf(middleware)
+        if (idx !== -1) 
         {
-            this._middlewareFunctions.splice(idx, 1);
+            this._middlewareFunctions.splice(idx, 1)
         }
 
-        return this;
+        return this
     }
 
     /**
-     * Process values through this middleware
-     * @param a Required, this is the value modified/passed through each middleware fn
-     * @param b Optional extra argument passed to each middleware function
-     * @param c Optional extra argument passed to each middleware function
-     */
-    async process(a: T, b?: U, c?: V): Promise<T|undefined|void>
+   * Process values through this middleware
+   * @param a Required, this is the value modified/passed through each middleware fn
+   * @param b Optional extra argument passed to each middleware function
+   * @param c Optional extra argument passed to each middleware function
+   */
+    async process(a: T, b?: U, c?: V): Promise<T | undefined | void> 
     {
-        let val: T|undefined = a;
+        let val: T | undefined = a
 
-        for (const fn of this._middlewareFunctions)
+        for (const fn of this._middlewareFunctions) 
         {
-            if (!val)
+            if (!val) 
             {
-                return;
+                return
             }
 
-            val = await fn(val, b, c);
+            val = await fn(val, b, c)
         }
 
-        return val;
+        return val
     }
 }

@@ -1,60 +1,60 @@
-import { AsyncStreamEmitter } from '@topgunbuild/async-stream-emitter';
-import { TGMessage } from '../../types';
+import { AsyncStreamEmitter } from '@topgunbuild/async-stream-emitter'
+import type { TGMessage } from '../../types'
 
-export class TGQueue<T = TGMessage> extends AsyncStreamEmitter<any>
+export class TGQueue<T = TGMessage> extends AsyncStreamEmitter<any> 
 {
-    readonly name: string;
-    private _queue: T[];
+    readonly name: string
+    private _queue: T[]
 
     /**
-     * Constructor
-     */
-    constructor(name = 'Queue')
+   * Constructor
+   */
+    constructor(name = 'Queue') 
     {
-        super();
-        this.name   = name;
-        this._queue = [];
+        super()
+        this.name = name
+        this._queue = []
     }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Public methods
     // -----------------------------------------------------------------------------------------------------
 
-    count(): number
+    count(): number 
     {
-        return this._queue.length;
+        return this._queue.length
     }
 
-    has(item: T): boolean
+    has(item: T): boolean 
     {
-        return this._queue.indexOf(item) !== -1;
+        return this._queue.indexOf(item) !== -1
     }
 
-    enqueue(item: T): TGQueue<T>
+    enqueue(item: T): TGQueue<T> 
     {
-        if (this.has(item))
+        if (this.has(item)) 
         {
-            return this;
+            return this
         }
 
-        this._queue.splice(0, 0, item);
-        return this;
+        this._queue.splice(0, 0, item)
+        return this
     }
 
-    dequeue(): T|undefined
+    dequeue(): T | undefined 
     {
-        return this._queue.pop();
+        return this._queue.pop()
     }
 
-    enqueueMany(items: readonly T[]): TGQueue<T>
+    enqueueMany(items: readonly T[]): TGQueue<T> 
     {
-        const filtered = items.filter(item => !this.has(item));
+        const filtered = items.filter(item => !this.has(item))
 
-        if (filtered.length)
+        if (filtered.length) 
         {
-            this._queue.splice(0, 0, ...filtered.slice().reverse());
+            this._queue.splice(0, 0, ...filtered.slice().reverse())
         }
 
-        return this;
+        return this
     }
 }

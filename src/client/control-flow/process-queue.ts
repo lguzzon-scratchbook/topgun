@@ -1,99 +1,100 @@
-import { TGMessage } from '../../types';
-import { TGQueue } from './queue';
-import { TGMiddlewareSystem } from './middleware-system';
+import type { TGMessage } from '../../types'
+import { TGMiddlewareSystem } from './middleware-system'
+import { TGQueue } from './queue'
 
-type TGProcessDupesOption = 'process_dupes'|'dont_process_dupes';
+type TGProcessDupesOption = 'process_dupes' | 'dont_process_dupes'
 
-export class TGProcessQueue<T = TGMessage,
+export class TGProcessQueue<
+    T = TGMessage,
     U = any,
-    V = any,
-> extends TGQueue<T>
+    V = any
+> extends TGQueue<T> 
 {
-    isProcessing: boolean;
-    readonly middleware: TGMiddlewareSystem<T, U, V>;
-    readonly processDupes: TGProcessDupesOption;
+    isProcessing: boolean
+    readonly middleware: TGMiddlewareSystem<T, U, V>
+    readonly processDupes: TGProcessDupesOption
 
-    protected alreadyProcessed: T[];
+    protected alreadyProcessed: T[]
 
     /**
-     * Constructor
-     */
+   * Constructor
+   */
     constructor(
-        name                               = 'ProcessQueue',
-        processDupes: TGProcessDupesOption = 'process_dupes',
-    )
+        name = 'ProcessQueue',
+        processDupes: TGProcessDupesOption = 'process_dupes'
+    ) 
     {
-        super(name);
-        this.alreadyProcessed = [];
-        this.isProcessing     = false;
-        this.processDupes     = processDupes;
-        this.middleware       = new TGMiddlewareSystem<T, U, V>(`${name}.middleware`);
+        super(name)
+        this.alreadyProcessed = []
+        this.isProcessing = false
+        this.processDupes = processDupes
+        this.middleware = new TGMiddlewareSystem<T, U, V>(`${name}.middleware`)
     }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Public methods
     // -----------------------------------------------------------------------------------------------------
 
-    has(item: T): boolean
+    has(item: T): boolean 
     {
-        return super.has(item) || this.alreadyProcessed.indexOf(item) !== -1;
+        return super.has(item) || this.alreadyProcessed.indexOf(item) !== -1
     }
 
-    async processNext(b?: U, c?: V): Promise<void>
+    async processNext(b?: U, c?: V): Promise<void> 
     {
-        let item            = this.dequeue();
-        const processedItem = item;
+        let item = this.dequeue()
+        const processedItem = item
 
-        if (!item)
+        if (!item) 
         {
-            return;
+            return
         }
 
-        item = (await this.middleware.process(item, b, c)) as T|undefined;
+        item = (await this.middleware.process(item, b, c)) as T | undefined
 
-        if (processedItem && this.processDupes === 'dont_process_dupes')
+        if (processedItem && this.processDupes === 'dont_process_dupes') 
         {
-            this.alreadyProcessed.push(processedItem);
+            this.alreadyProcessed.push(processedItem)
         }
 
-        if (item)
+        if (item) 
         {
-            this.emit('completed', item);
+            this.emit('completed', item)
         }
     }
 
-    enqueueMany(items: readonly T[]): TGProcessQueue<T, U, V>
+    enqueueMany(items: readonly T[]): TGProcessQueue<T, U, V> 
     {
-        super.enqueueMany(items);
-        return this;
+        super.enqueueMany(items)
+        return this
     }
 
-    async process(): Promise<void>
+    async process(): Promise<void> 
     {
-        if (this.isProcessing)
+        if (this.isProcessing) 
         {
-            return;
+            return
         }
 
-        if (!this.count())
+        if (!this.count()) 
         {
-            return;
+            return
         }
 
-        this.isProcessing = true;
-        while (this.count())
+        this.isProcessing = true
+        while (this.count()) 
         {
-            try
+            try 
             {
-                await this.processNext();
+                await this.processNext()
             }
-            catch (e)
+            catch (e) 
             {
-                console.error('Process Queue error', e);
+                console.error('Process Queue error', e)
             }
         }
 
-        this.emit('emptied', true);
-        this.isProcessing = false;
+        this.emit('emptied', true)
+        this.isProcessing = false
     }
 }

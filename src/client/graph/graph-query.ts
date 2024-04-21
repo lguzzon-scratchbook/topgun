@@ -1,47 +1,58 @@
-import { isFunction, isEmptyObject, isDefined, isNull } from '@topgunbuild/typed';
-import { TGGet, TGGraphData, TGMessage, TGNode, TGOnCb, TGOptionsGet, TGRefNode, TGValue } from '../../types';
-import { TGGraph } from './graph';
-import { filterMatch } from '../../storage/utils';
-import { uuidv4 } from '../../utils/uuidv4';
-import { TGExchange } from '../../stream/exchange';
-import { TGStream } from '../../stream/stream';
-import { getNodeSoul } from '../../utils';
+import {
+    isDefined,
+    isEmptyObject,
+    isFunction,
+    isNull
+} from '@topgunbuild/typed'
+import { filterMatch } from '../../storage/utils'
+import { TGExchange } from '../../stream/exchange'
+import type { TGStream } from '../../stream/stream'
+import type {
+    TGGet,
+    TGGraphData,
+    TGMessage,
+    TGNode,
+    TGOnCb,
+    TGOptionsGet,
+    TGRefNode,
+    TGValue
+} from '../../types'
+import { getNodeSoul } from '../../utils'
+import { uuidv4 } from '../../utils/uuidv4'
+import type { TGGraph } from './graph'
 
-export class TGGraphQuery extends TGExchange
+export class TGGraphQuery extends TGExchange 
 {
-    readonly queryString: string;
-    readonly options: TGOptionsGet;
+    readonly queryString: string
+    readonly options: TGOptionsGet
 
-    private _endCurQuery?: () => void;
-    protected readonly _isCollectionQuery: boolean;
-    private readonly _graph: TGGraph;
-    private readonly _updateGraph: (
-        data: TGGraphData,
-        replyToId?: string,
-    ) => void;
+    private _endCurQuery?: () => void
+    protected readonly _isCollectionQuery: boolean
+    private readonly _graph: TGGraph
+    private readonly _updateGraph: (data: TGGraphData, replyToId?: string) => void
 
-    readonly targetNodesMap: Map<string, string>;
-    readonly referenceNodesMap: Map<string, string>;
-    readonly streamMap: Map<string, TGStream<any>>;
+    readonly targetNodesMap: Map<string, string>
+    readonly referenceNodesMap: Map<string, string>
+    readonly streamMap: Map<string, TGStream<any>>
 
     /**
-     * Constructor
-     */
+   * Constructor
+   */
     constructor(
         graph: TGGraph,
         queryString: string,
-        updateGraph: (data: TGGraphData, replyToId?: string) => void,
-    )
+        updateGraph: (data: TGGraphData, replyToId?: string) => void
+    ) 
     {
-        super();
-        this.options            = JSON.parse(queryString);
-        this.queryString        = queryString;
-        this._graph             = graph;
-        this._updateGraph       = updateGraph;
-        this._isCollectionQuery = isDefined(this.options['%']);
-        this.targetNodesMap     = new Map<string, string>();
-        this.referenceNodesMap  = new Map<string, string>();
-        this.streamMap          = new Map<string, TGStream<any>>();
+        super()
+        this.options = JSON.parse(queryString)
+        this.queryString = queryString
+        this._graph = graph
+        this._updateGraph = updateGraph
+        this._isCollectionQuery = isDefined(this.options['%'])
+        this.targetNodesMap = new Map<string, string>()
+        this.referenceNodesMap = new Map<string, string>()
+        this.streamMap = new Map<string, TGStream<any>>()
     }
 
     // -----------------------------------------------------------------------------------------------------
@@ -49,107 +60,114 @@ export class TGGraphQuery extends TGExchange
     // -----------------------------------------------------------------------------------------------------
 
     /**
-     * Number of subscribers for this query
-     */
-    listenerCount(): number
+   * Number of subscribers for this query
+   */
+    listenerCount(): number 
     {
-        return this.subscriptions(true).length;
+        return this.subscriptions(true).length
     }
 
     /**
-     * Create a data stream for this query
-     */
-    getStream(cb?: TGOnCb<any>, msgId?: string, askOnce?: boolean): TGStream<any>
+   * Create a data stream for this query
+   */
+    getStream(
+        cb?: TGOnCb<any>,
+        msgId?: string,
+        askOnce?: boolean
+    ): TGStream<any> 
     {
-        const stream = this.subscribe<{value: TGValue, key: string}>();
+        const stream = this.subscribe<{ value: TGValue; key: string }>()
 
-        if (isFunction(cb))
+        if (isFunction(cb)) 
         {
-            (async () =>
+            ;(async () => 
             {
-                for await (const { value, key } of stream)
+                for await (const { value, key } of stream) 
                 {
-                    cb(value, key);
+                    cb(value, key)
                 }
-            })();
+            })()
         }
 
-        this.#ask(msgId, askOnce);
-        return stream;
+        this.#ask(msgId, askOnce)
+        return stream
     }
 
     /**
-     * Receive reference node
-     */
-    setRef(node: TGRefNode): void
+   * Receive reference node
+   */
+    setRef(node: TGRefNode): void 
     {
-        const soul = getNodeSoul(node);
+        const soul = getNodeSoul(node)
 
-        if (!this.targetNodesMap.has(node['#']))
+        if (!this.targetNodesMap.has(node['#'])) 
         {
-            this.targetNodesMap.set(node['#'], soul);
-            this.referenceNodesMap.set(soul, node['#']);
+            this.targetNodesMap.set(node['#'], soul)
+            this.referenceNodesMap.set(soul, node['#'])
         }
     }
 
     /**
-     * Receive reference target node
-     */
-    receiveTarget(node: TGNode|undefined, soul: string): void
+   * Receive reference target node
+   */
+    receiveTarget(node: TGNode | undefined, soul: string): void 
     {
-        this.#publishNode(node, soul);
+        this.#publishNode(node, soul)
     }
 
     /**
-     * Receive data from some local or external source
-     */
-    receive(node: TGNode|undefined, soul: string): void
+   * Receive data from some local or external source
+   */
+    receive(node: TGNode | undefined, soul: string): void 
     {
-        if (isNull(node) && this.referenceNodesMap.has(soul))
+        if (isNull(node) && this.referenceNodesMap.has(soul)) 
         {
-            this.targetNodesMap.delete(this.referenceNodesMap.get(soul));
-            this.referenceNodesMap.delete(soul);
+            this.targetNodesMap.delete(this.referenceNodesMap.get(soul))
+            this.referenceNodesMap.delete(soul)
         }
 
-        this.#publishNode(node, soul);
+        this.#publishNode(node, soul)
     }
 
     /**
-     * If there is a reference target node
-     */
-    isTarget(soul: string): boolean
+   * If there is a reference target node
+   */
+    isTarget(soul: string): boolean 
     {
-        return this.targetNodesMap.has(soul);
+        return this.targetNodesMap.has(soul)
     }
 
     /**
-     * Yes, if the request is subscribed to this soul
-     */
-    match(soul: string): boolean
+   * Yes, if the request is subscribed to this soul
+   */
+    match(soul: string): boolean 
     {
-        return filterMatch(soul, this.options);
+        return filterMatch(soul, this.options)
     }
 
     /**
-     * Destroy request
-     */
-    off(): TGGraphQuery
+   * Destroy request
+   */
+    off(): TGGraphQuery 
     {
-        if (isFunction(this._endCurQuery))
+        if (isFunction(this._endCurQuery)) 
         {
-            this._endCurQuery();
+            this._endCurQuery()
         }
-        this.destroy();
-        this.referenceNodesMap.clear();
-        this.targetNodesMap.clear();
+        this.destroy()
+        this.referenceNodesMap.clear()
+        this.targetNodesMap.clear()
 
-        for (const soul of this.streamMap.keys())
+        for (const soul of this.streamMap.keys()) 
         {
-            this._graph.unlisten(this._graph.queryStringForSoul(soul), this.streamMap.get(soul));
+            this._graph.unlisten(
+                this._graph.queryStringForSoul(soul),
+                this.streamMap.get(soul)
+            )
         }
-        this.streamMap.clear();
+        this.streamMap.clear()
 
-        return this;
+        return this
     }
 
     // -----------------------------------------------------------------------------------------------------
@@ -157,13 +175,13 @@ export class TGGraphQuery extends TGExchange
     // -----------------------------------------------------------------------------------------------------
 
     /**
-     * Request data from peers
-     */
-    #ask(msgId?: string, once?: boolean): TGGraphQuery
+   * Request data from peers
+   */
+    #ask(msgId?: string, once?: boolean): TGGraphQuery 
     {
-        if (this._endCurQuery)
+        if (this._endCurQuery) 
         {
-            return this;
+            return this
         }
 
         const data: TGGet = {
@@ -171,43 +189,43 @@ export class TGGraphQuery extends TGExchange
             msgId  : msgId || uuidv4(),
             options: this.options,
             cb     : (msg: TGMessage) => this.#onDirectQueryReply(msg)
-        };
+        }
 
-        this._endCurQuery = this._graph.get(data);
-        return this;
+        this._endCurQuery = this._graph.get(data)
+        return this
     }
 
     /**
-     * Publish node to all subscriptions
-     */
-    #publishNode(value: TGNode|undefined, soul: string): void
+   * Publish node to all subscriptions
+   */
+    #publishNode(value: TGNode | undefined, soul: string): void 
     {
-        // if (soul.includes('/node/') && this.queryString.includes('favorite'))
-        // {
-        //     console.trace('publishNode-', { soul, value });
-        // }
-        this.subscriptions(true).forEach((streamName) =>
+    // if (soul.includes('/node/') && this.queryString.includes('favorite'))
+    // {
+    //     console.trace('publishNode-', { soul, value });
+    // }
+        this.subscriptions(true).forEach((streamName) => 
         {
-            this.publish(streamName, { value, key: soul });
-        });
+            this.publish(streamName, { value, key: soul })
+        })
     }
 
     /**
-     * Processing a direct peer response
-     */
-    #onDirectQueryReply(msg: TGMessage): void
+   * Processing a direct peer response
+   */
+    #onDirectQueryReply(msg: TGMessage): void 
     {
-        // Return an empty response when requesting a node or property
-        // if (isEmptyObject(msg.put) && !this._isCollectionQuery)
-        // {
-        //     const soul = this.options['#'];
-        //
-        //     this._updateGraph(
-        //         {
-        //             [soul]: undefined,
-        //         },
-        //         msg['@'],
-        //     );
-        // }
+    // Return an empty response when requesting a node or property
+    // if (isEmptyObject(msg.put) && !this._isCollectionQuery)
+    // {
+    //     const soul = this.options['#'];
+    //
+    //     this._updateGraph(
+    //         {
+    //             [soul]: undefined,
+    //         },
+    //         msg['@'],
+    //     );
+    // }
     }
 }

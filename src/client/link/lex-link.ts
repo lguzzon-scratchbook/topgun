@@ -1,89 +1,95 @@
-import { TGLink } from './link';
-import { TGCollectionOptions, TGData, TGOnCb, TGOptionsGet, TGValue } from '../../types';
-import { TGStream } from '../../stream/stream';
-import { TGLex } from './lex';
+import type { TGStream } from '../../stream/stream'
+import type {
+    TGCollectionOptions,
+    TGData,
+    TGOnCb,
+    TGOptionsGet,
+    TGValue
+} from '../../types'
+import { TGLex } from './lex'
+import type { TGLink } from './link'
 
-export class TGLexLink extends TGLex
+export class TGLexLink extends TGLex 
 {
-    collectionOptions: TGCollectionOptions;
-    private readonly _link: TGLink;
+    collectionOptions: TGCollectionOptions
+    private readonly _link: TGLink
 
     /**
-     * Constructor
-     */
-    constructor(link: TGLink, maxLimit = 200, optionsGet: TGOptionsGet = {})
+   * Constructor
+   */
+    constructor(link: TGLink, maxLimit = 200, optionsGet: TGOptionsGet = {}) 
     {
-        super(optionsGet, maxLimit);
-        this._link             = link;
-        this._link._lex        = this;
-        this.collectionOptions = {};
-        this.#setSoul();
+        super(optionsGet, maxLimit)
+        this._link = link
+        this._link._lex = this
+        this.collectionOptions = {}
+        this.#setSoul()
     }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Public methods
     // -----------------------------------------------------------------------------------------------------
 
-    start(value: string): TGLexLink
+    start(value: string): TGLexLink 
     {
-        super.start(value);
-        return this;
+        super.start(value)
+        return this
     }
 
-    end(value: string): TGLexLink
+    end(value: string): TGLexLink 
     {
-        super.end(value);
-        return this;
+        super.end(value)
+        return this
     }
 
-    prefix(value: string): TGLexLink
+    prefix(value: string): TGLexLink 
     {
-        super.prefix(value);
-        return this;
+        super.prefix(value)
+        return this
     }
 
-    limit(value: number): TGLexLink
+    limit(value: number): TGLexLink 
     {
-        super.limit(value);
-        return this;
+        super.limit(value)
+        return this
     }
 
-    reverse(value: boolean = true): TGLexLink
+    reverse(value = true): TGLexLink 
     {
-        super.reverse(value);
-        return this;
+        super.reverse(value)
+        return this
     }
 
-    once<T extends TGValue>(cb?: TGOnCb<T>): TGStream<TGData<T>>
+    once<T extends TGValue>(cb?: TGOnCb<T>): TGStream<TGData<T>> 
     {
-        return this._link.once(cb);
+        return this._link.once(cb)
     }
 
-    on<T extends TGValue>(cb?: TGOnCb<T>): TGStream<TGData<T>>
+    on<T extends TGValue>(cb?: TGOnCb<T>): TGStream<TGData<T>> 
     {
-        return this._link.on(cb);
+        return this._link.on(cb)
     }
 
-    off(): void
+    off(): void 
     {
-        return this._link.off();
+        return this._link.off()
     }
 
-    collection(collectionOptions: TGCollectionOptions = {}): TGLexLink
+    collection(collectionOptions: TGCollectionOptions = {}): TGLexLink 
     {
         this.collectionOptions = {
             ...this.collectionOptions,
             ...collectionOptions
-        };
-        return this;
+        }
+        return this
     }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Private methods
     // -----------------------------------------------------------------------------------------------------
 
-    #setSoul(): void
+    #setSoul(): void 
     {
-        this.options['#'] = this._link.soul = this._link.getPath().join('/');
+        this.options['#'] = this._link.soul = this._link.getPath().join('/')
     }
 }

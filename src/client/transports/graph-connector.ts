@@ -1,183 +1,177 @@
-import { AsyncStreamEmitter } from '@topgunbuild/async-stream-emitter';
-import { TGGet, TGPut, TGMessage } from '../../types';
-import { TGProcessQueue } from '../control-flow/process-queue';
-import { TGGraph } from '../graph/graph';
+import { AsyncStreamEmitter } from '@topgunbuild/async-stream-emitter'
+import type { TGGet, TGMessage, TGPut } from '../../types'
+import { TGProcessQueue } from '../control-flow/process-queue'
+import type { TGGraph } from '../graph/graph'
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
-export abstract class TGGraphConnector extends AsyncStreamEmitter<any>
+export abstract class TGGraphConnector extends AsyncStreamEmitter<any> 
 {
-    readonly name: string;
-    isConnected: boolean;
+    readonly name: string
+    isConnected: boolean
 
-    protected readonly inputQueue: TGProcessQueue<TGMessage>;
-    protected readonly outputQueue: TGProcessQueue<TGMessage>;
+    protected readonly inputQueue: TGProcessQueue<TGMessage>
+    protected readonly outputQueue: TGProcessQueue<TGMessage>
 
     /**
-     * Constructor
-     */
-    protected constructor(name = 'GraphConnector')
+   * Constructor
+   */
+    protected constructor(name = 'GraphConnector') 
     {
-        super();
-        this.isConnected = false;
-        this.name        = name;
+        super()
+        this.isConnected = false
+        this.name = name
 
-        this.put = this.put.bind(this);
-        this.off = this.off.bind(this);
+        this.put = this.put.bind(this)
+        this.off = this.off.bind(this)
 
-        this.inputQueue  = new TGProcessQueue<TGMessage>(`${name}.inputQueue`);
-        this.outputQueue = new TGProcessQueue<TGMessage>(`${name}.outputQueue`);
-
-        (async () =>
+        this.inputQueue = new TGProcessQueue<TGMessage>(`${name}.inputQueue`)
+        this.outputQueue = new TGProcessQueue<TGMessage>(`${name}.outputQueue`)
+        ;(async () => 
         {
-            for await (const value of this.listener('connect'))
+            for await (const value of this.listener('connect')) 
             {
-                this.#onConnectedChange(true);
+                this.#onConnectedChange(true)
             }
-        })();
-
-        (async () =>
+        })()
+        ;(async () => 
         {
-            for await (const value of this.listener('disconnect'))
+            for await (const value of this.listener('disconnect')) 
             {
-                this.#onConnectedChange(false);
+                this.#onConnectedChange(false)
             }
-        })();
+        })()
     }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Public methods
     // -----------------------------------------------------------------------------------------------------
 
-    connectToGraph(graph: TGGraph): TGGraphConnector
+    connectToGraph(graph: TGGraph): TGGraphConnector 
     {
-        (async () =>
+        ;(async () => 
         {
-            for await (const value of graph.listener('off'))
+            for await (const value of graph.listener('off')) 
             {
-                this.off(value);
+                this.off(value)
             }
-        })();
-        return this;
+        })()
+        return this
     }
 
-    off(_msgId: string): TGGraphConnector
+    off(_msgId: string): TGGraphConnector 
     {
-        return this;
+        return this
     }
 
-    sendPutsFromGraph(graph: TGGraph): TGGraphConnector
+    sendPutsFromGraph(graph: TGGraph): TGGraphConnector 
     {
-        (async () =>
+        ;(async () => 
         {
-            for await (const value of graph.listener('put'))
+            for await (const value of graph.listener('put')) 
             {
-                this.put(value);
+                this.put(value)
             }
-        })();
-        return this;
+        })()
+        return this
     }
 
-    sendRequestsFromGraph(graph: TGGraph): TGGraphConnector
+    sendRequestsFromGraph(graph: TGGraph): TGGraphConnector 
     {
-        (async () =>
+        ;(async () => 
         {
-            for await (const value of graph.listener('get'))
+            for await (const value of graph.listener('get')) 
             {
-                this.get(value);
+                this.get(value)
             }
-        })();
-        return this;
+        })()
+        return this
     }
 
-    waitForConnection(): Promise<void>
+    waitForConnection(): Promise<void> 
     {
-        if (this.isConnected)
+        if (this.isConnected) 
         {
-            return Promise.resolve();
+            return Promise.resolve()
         }
 
-        return this.listener('connect').once();
+        return this.listener('connect').once()
     }
 
     /**
-     * Send graph data for one or more nodes
-     *
-     * @returns A function to be called to clean up callback listeners
-     */
-    put(_params: TGPut): () => void
+   * Send graph data for one or more nodes
+   *
+   * @returns A function to be called to clean up callback listeners
+   */
+    put(_params: TGPut): () => void 
     {
-        return () =>
-        {
-        };
+        return () => 
+        {}
     }
 
     /**
-     * Request data for a given soul
-     *
-     * @returns A function to be called to clean up callback listeners
-     */
-    get(_params: TGGet): () => void
+   * Request data for a given soul
+   *
+   * @returns A function to be called to clean up callback listeners
+   */
+    get(_params: TGGet): () => void 
     {
-        return () =>
-        {
-        };
+        return () => 
+        {}
     }
 
     /**
-     * Queues outgoing messages for sending
-     *
-     * @param msgs The wire protocol messages to enqueue
-     */
-    send(msgs: readonly TGMessage[]): TGGraphConnector
+   * Queues outgoing messages for sending
+   *
+   * @param msgs The wire protocol messages to enqueue
+   */
+    send(msgs: readonly TGMessage[]): TGGraphConnector 
     {
-        this.outputQueue.enqueueMany(msgs);
-        if (this.isConnected)
+        this.outputQueue.enqueueMany(msgs)
+        if (this.isConnected) 
         {
-            this.outputQueue.process();
+            this.outputQueue.process()
         }
 
-        return this;
+        return this
     }
 
     /**
-     * Queue incoming messages for processing
-     *
-     * @param msgs
-     */
-    ingest(msgs: readonly TGMessage[]): TGGraphConnector
+   * Queue incoming messages for processing
+   *
+   * @param msgs
+   */
+    ingest(msgs: readonly TGMessage[]): TGGraphConnector 
     {
-        this.inputQueue.enqueueMany(msgs).process();
+        this.inputQueue.enqueueMany(msgs).process()
 
-        return this;
+        return this
     }
 
-    async disconnect(): Promise<void>
-    {
-    }
+    async disconnect(): Promise<void> 
+    {}
 
-    async authenticate(pub: string, priv: string): Promise<void>
-    {
-    }
+    async authenticate(pub: string, priv: string): Promise<void> 
+    {}
 
-    rpc<T>(functionName: string, data?: any): Promise<T>
+    rpc<T>(functionName: string, data?: any): Promise<T> 
     {
-        return Promise.resolve(null);
+        return Promise.resolve(null)
     }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Private methods
     // -----------------------------------------------------------------------------------------------------
 
-    #onConnectedChange(connected?: boolean): void
+    #onConnectedChange(connected?: boolean): void 
     {
-        if (connected)
+        if (connected) 
         {
-            this.isConnected = true;
-            this.outputQueue.process();
+            this.isConnected = true
+            this.outputQueue.process()
         }
-        else
+        else 
         {
-            this.isConnected = false;
+            this.isConnected = false
         }
     }
 }
