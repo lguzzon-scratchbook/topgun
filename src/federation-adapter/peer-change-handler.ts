@@ -1,55 +1,56 @@
-import { TGMessage } from '../types';
-import { PeersWriter } from './peers-writer';
-import { TGPeer } from './peer';
-import { TGExtendedLoggerType } from '../logger';
+import type { TGExtendedLoggerType } from '../logger'
+import type { TGMessage } from '../types'
+import type { TGPeer } from './peer'
+import type { PeersWriter } from './peers-writer'
 
-export class PeerChangeHandler
+export class PeerChangeHandler 
 {
-    disconnector: () => void;
+    disconnector: () => void
 
     /**
-     * Constructor
-     */
+   * Constructor
+   */
     constructor(
         private readonly serverName: string,
         private readonly peer: TGPeer,
         private readonly writer: PeersWriter,
         private readonly logger: TGExtendedLoggerType
-    )
-    {
-    }
+    ) 
+    {}
 
     // -----------------------------------------------------------------------------------------------------
     // @ Public methods
     // -----------------------------------------------------------------------------------------------------
 
-    connect(): void
+    connect(): void 
     {
-        this.disconnector = this.peer.onChange((message: TGMessage) => this.#handlePeerChange(message));
+        this.disconnector = this.peer.onChange((message: TGMessage) =>
+            this.#handlePeerChange(message)
+        )
     }
 
-    disconnect(): void
+    disconnect(): void 
     {
-        this.disconnector && this.disconnector();
+        this.disconnector && this.disconnector()
     }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Private methods
     // -----------------------------------------------------------------------------------------------------
 
-    #handlePeerChange(changes: TGMessage): void
+    #handlePeerChange(changes: TGMessage): void 
     {
-        try
+        try 
         {
-            if (changes.originators && changes.originators[this.serverName])
+            if (changes.originators && changes.originators[this.serverName]) 
             {
-                return;
+                return
             }
-            this.writer.put(changes.put, this.peer.uri, changes.originators);
+            this.writer.put(changes.put, this.peer.uri, changes.originators)
         }
-        catch (e)
+        catch (e) 
         {
-            this.logger.error('Error syncing from peer', this.peer.uri, e.stack);
+            this.logger.error('Error syncing from peer', this.peer.uri, e.stack)
         }
     }
 }

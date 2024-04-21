@@ -1,73 +1,90 @@
-import { isNotEmptyObject } from '@topgunbuild/typed';
-import { TGGraphAdapter, TGGraphData, TGOptionsGet, TGOriginators, TGPartialGraphData } from '../types';
-import { TGPeers } from './peers';
-import { TGFederatedAdapterOptions } from './types';
-import { TGExtendedLoggerType } from '../logger';
-import { TGPeer } from './peer';
+import { isNotEmptyObject } from '@topgunbuild/typed'
+import type { TGExtendedLoggerType } from '../logger'
+import type {
+    TGGraphAdapter,
+    TGGraphData,
+    TGOptionsGet,
+    TGOriginators,
+    TGPartialGraphData
+} from '../types'
+import type { TGPeer } from './peer'
+import type { TGPeers } from './peers'
+import type { TGFederatedAdapterOptions } from './types'
 
-export class PeersWriter
+export class PeersWriter 
 {
     /**
-     * Constructor
-     */
+   * Constructor
+   */
     constructor(
         private readonly serverName: string,
         private readonly persistence: TGGraphAdapter,
         private readonly peers: TGPeers,
         private readonly options: TGFederatedAdapterOptions,
         private readonly logger: TGExtendedLoggerType
-    )
-    {
-    }
+    ) 
+    {}
 
     // -----------------------------------------------------------------------------------------------------
     // @ Public methods
     // -----------------------------------------------------------------------------------------------------
 
-    async updatePeers(data: TGGraphData, peers: TGPeer[], originators: TGOriginators): Promise<void>
+    async updatePeers(
+        data: TGGraphData,
+        peers: TGPeer[],
+        originators: TGOriginators
+    ): Promise<void> 
     {
-        if (peers.length > 0)
+        if (peers.length > 0) 
         {
-            originators                  = originators || {};
-            originators[this.serverName] = 1;
+            originators = originators || {}
+            originators[this.serverName] = 1
 
             await Promise.all(
                 peers.map(peer =>
-                    peer
-                        .putInPeer(data, originators)
-                        .catch((err) =>
-                        {
-                            this.logger.warn('Failed to update peer', peer.uri, err.stack || err, data)
-                        })
+                    peer.putInPeer(data, originators).catch((err) => 
+                    {
+                        this.logger.warn(
+                            'Failed to update peer',
+                            peer.uri,
+                            err.stack || err,
+                            data
+                        )
+                    })
                 )
-            );
+            )
         }
     }
 
-    async updateFromPeers(getOpts: TGOptionsGet): Promise<void>
+    async updateFromPeers(getOpts: TGOptionsGet): Promise<void> 
     {
-        if (this.peers.size > 0)
+        if (this.peers.size > 0) 
         {
             await Promise.all(
-                this.peers.getPeers()
+                this.peers
+                    .getPeers()
                     .filter(peer => peer.isConnected && peer.isOpen)
                     .map(peer => this.#updateFromPeer(peer.uri, getOpts))
-            );
+            )
         }
     }
 
-    async put(graph: TGPartialGraphData, currentPeerUri: string, originators: TGOriginators): Promise<void>
+    async put(
+        graph: TGPartialGraphData,
+        currentPeerUri: string,
+        originators: TGOriginators
+    ): Promise<void> 
     {
-        if (isNotEmptyObject(graph))
+        if (isNotEmptyObject(graph)) 
         {
-            const diff = await this.persistence.put(graph);
+            const diff = await this.persistence.put(graph)
 
-            if (diff)
+            if (diff) 
             {
-                if (this.options.putToPeers)
+                if (this.options.putToPeers) 
                 {
-                    const otherPeers = this.peers.getOtherPeers(currentPeerUri);
-                    this.updatePeers(diff, otherPeers, originators);
+                    const otherPeers = this.peers.getOtherPeers(currentPeerUri)
+                    this.updatePeers(diff, otherPeers, originators)
                 }
             }
         }
@@ -77,21 +94,24 @@ export class PeersWriter
     // @ Private methods
     // -----------------------------------------------------------------------------------------------------
 
-    async #updateFromPeer(currentPeerUri: string, getOpts: TGOptionsGet): Promise<void>
+    async #updateFromPeer(
+        currentPeerUri: string,
+        getOpts: TGOptionsGet
+    ): Promise<void> 
     {
-        const peer    = this.peers.get(currentPeerUri);
-        const message = await peer.getFromPeer(getOpts);
+        const peer = this.peers.get(currentPeerUri)
+        const message = await peer.getFromPeer(getOpts)
 
-        try
+        try 
         {
-            await this.put(message.put, currentPeerUri, message.originators);
+            await this.put(message.put, currentPeerUri, message.originators)
         }
-        catch (e)
+        catch (e) 
         {
             this.logger.error('Error updating from peer', {
                 error  : e.stack,
                 peerUri: currentPeerUri
-            });
+            })
         }
     }
 }

@@ -1,64 +1,60 @@
-import { TGPeerOptions } from '../types';
-import { TGPeer } from './peer';
-import { TGExtendedLoggerType } from '../logger';
+import type { TGExtendedLoggerType } from '../logger'
+import type { TGPeerOptions } from '../types'
+import { TGPeer } from './peer'
 
-export class TGPeers extends Map<string, TGPeer>
+export class TGPeers extends Map<string, TGPeer> 
 {
     /**
-     * Constructor
-     */
+   * Constructor
+   */
     constructor(
         private readonly peers: TGPeerOptions[],
         private readonly peerSecretKey: string,
         private readonly logger: TGExtendedLoggerType
-    )
+    ) 
     {
-        super();
-        this.#init(peers, peerSecretKey);
+        super()
+        this.#init(peers, peerSecretKey)
     }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Public methods
     // -----------------------------------------------------------------------------------------------------
 
-    getPeers(): TGPeer[]
+    getPeers(): TGPeer[] 
     {
-        return Array.from(this.values());
+        return Array.from(this.values())
     }
 
-    getOtherPeers(uri: string): TGPeer[]
+    getOtherPeers(uri: string): TGPeer[] 
     {
-        return this.getPeers().filter(peer => peer.uri !== uri);
+        return this.getPeers().filter(peer => peer.uri !== uri)
     }
 
-    waitForAuth(): Promise<void[]>
+    waitForAuth(): Promise<void[]> 
     {
-        return Promise.all(
-            this.getPeers().map(peer => peer.waitForAuth())
-        );
+        return Promise.all(this.getPeers().map(peer => peer.waitForAuth()))
     }
 
-    disconnect(): Promise<void[]>
+    disconnect(): Promise<void[]> 
     {
-        return Promise.all(
-            this.getPeers().map(peer => peer.disconnect())
-        );
+        return Promise.all(this.getPeers().map(peer => peer.disconnect()))
     }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Private methods
     // -----------------------------------------------------------------------------------------------------
 
-    #init(peers: TGPeerOptions[], peerSecretKey: string): void
+    #init(peers: TGPeerOptions[], peerSecretKey: string): void 
     {
-        if (Array.isArray(peers))
+        if (Array.isArray(peers)) 
         {
-            for (const peer of peers)
+            for (const peer of peers) 
             {
-                const adapter = new TGPeer(peer, peerSecretKey, this.logger);
-                if (adapter.uri)
+                const adapter = new TGPeer(peer, peerSecretKey, this.logger)
+                if (adapter.uri) 
                 {
-                    this.set(adapter.uri, adapter);
+                    this.set(adapter.uri, adapter)
                 }
             }
         }

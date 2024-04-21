@@ -1,2 +1,2 @@
-export * from './types';
-export * from './federation-adapter';
+export * from './types'
+export * from './federation-adapter'
