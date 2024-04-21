@@ -1,7 +1,9 @@
-import { TGUserCredentials } from '../types';
-import { userCredentialsStruct } from './assert';
+import type { TGUserCredentials } from '../types'
+import { userCredentialsStruct } from './assert'
 
-export function isValidCredentials(maybeSession: unknown): maybeSession is TGUserCredentials
+export function isValidCredentials(
+    maybeSession: unknown
+): maybeSession is TGUserCredentials 
 {
-    return userCredentialsStruct(maybeSession).ok;
+    return userCredentialsStruct(maybeSession).ok
 }

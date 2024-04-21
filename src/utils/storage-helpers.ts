@@ -1,40 +1,40 @@
-import { TGSupportedStorage } from '../types';
+import type { TGSupportedStorage } from '../types'
 
 export const setItemAsync = async (
     storage: TGSupportedStorage,
     key: string,
-    data: any,
-): Promise<void> =>
+    data: any
+): Promise<void> => 
 {
-    await storage.setItem(key, JSON.stringify(data));
-};
+    await storage.setItem(key, JSON.stringify(data))
+}
 
 export const getItemAsync = async (
     storage: TGSupportedStorage,
-    key: string,
-): Promise<unknown> =>
+    key: string
+): Promise<unknown> => 
 {
-    const value = await storage.getItem(key);
+    const value = await storage.getItem(key)
 
-    if (!value)
+    if (!value) 
     {
-        return null;
+        return null
     }
 
-    try
+    try 
     {
-        return JSON.parse(value);
+        return JSON.parse(value)
     }
-    catch
+    catch 
     {
-        return value;
+        return value
     }
-};
+}
 
 export const removeItemAsync = async (
     storage: TGSupportedStorage,
-    key: string,
-): Promise<void> =>
+    key: string
+): Promise<void> => 
 {
-    await storage.removeItem(key);
-};
+    await storage.removeItem(key)
+}

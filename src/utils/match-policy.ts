@@ -1,36 +1,39 @@
-import { isString, isObject, isDefined } from '@topgunbuild/typed';
-import { IPolicyLex } from '../types';
+import { isDefined, isObject, isString } from '@topgunbuild/typed'
+import type { IPolicyLex } from '../types'
 
-export function matchPolicy(template: string, options: IPolicyLex|string): boolean
+export function matchPolicy(
+    template: string,
+    options: IPolicyLex | string
+): boolean 
 {
-    if (!isString(template))
+    if (!isString(template)) 
     {
-        return false;
+        return false
     }
-    else if (!isObject(options))
+    else if (!isObject(options)) 
     {
-        options = {};
+        options = {}
     }
 
-    if (isDefined(options['=']))
+    if (isDefined(options['='])) 
     {
-        return template === options['='];
+        return template === options['=']
     }
-    else if (isString(options['*']))
+    else if (isString(options['*'])) 
     {
-        return template.startsWith(options['*']);
+        return template.startsWith(options['*'])
     }
-    else if (isString(options['>']) && isString(options['<']))
+    else if (isString(options['>']) && isString(options['<'])) 
     {
-        return template >= options['>'] && template <= options['<'];
+        return template >= options['>'] && template <= options['<']
     }
-    else if (isString(options['>']) && template >= options['>'])
+    else if (isString(options['>']) && template >= options['>']) 
     {
-        return true;
+        return true
     }
-    else if (isString(options['<']) && template <= options['<'])
+    else if (isString(options['<']) && template <= options['<']) 
     {
-        return true;
+        return true
     }
-    return false;
+    return false
 }

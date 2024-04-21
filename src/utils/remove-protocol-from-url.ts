@@ -1,4 +1,4 @@
-export function removeProtocolFromUrl(url: string): string
+export function removeProtocolFromUrl(url: string): string 
 {
-    return url.replace(/(^\w+:|^)\/\//, '');
+    return url.replace(/(^\w+:|^)\/\//, '')
 }

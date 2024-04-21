@@ -1,4 +1,4 @@
-export async function sleep(duration = 1000): Promise<void>
+export async function sleep(duration = 1000): Promise<void> 
 {
-    return new Promise(ok => setTimeout(ok, duration));
+    return new Promise(ok => setTimeout(ok, duration))
 }

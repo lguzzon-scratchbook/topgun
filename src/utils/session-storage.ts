@@ -1,17 +1,19 @@
-import { TGSupportedStorage } from '../types';
-import { storageStruct } from './assert';
-import { localStorageAdapter } from './local-storage';
+import type { TGSupportedStorage } from '../types'
+import { storageStruct } from './assert'
+import { localStorageAdapter } from './local-storage'
 
-export function getSessionStorage(sessionStorage: TGSupportedStorage|undefined|boolean): TGSupportedStorage|null
+export function getSessionStorage(
+    sessionStorage: TGSupportedStorage | undefined | boolean
+): TGSupportedStorage | null 
 {
     return !sessionStorage
         ? null
         : storageStruct(sessionStorage).ok
             ? (sessionStorage as TGSupportedStorage)
-            : localStorageAdapter;
+            : localStorageAdapter
 }
 
-export function getSessionStorageKey(sessionStorageKey: string): string
+export function getSessionStorageKey(sessionStorageKey: string): string 
 {
-    return sessionStorageKey || 'topgun-session';
+    return sessionStorageKey || 'topgun-session'
 }

@@ -1,23 +1,27 @@
-export const debounce = (fn: (...rest: any[]) => any, delay: number, immediate?: boolean) =>
+export const debounce = (
+    fn: (...rest: any[]) => any,
+    delay: number,
+    immediate?: boolean
+) => 
 {
-    let timer: any = null;
-    return (...params: any[]) =>
+    let timer: any = null
+    return (...params: any[]) => 
     {
-        if (timer)
+        if (timer) 
         {
-            clearTimeout(timer);
+            clearTimeout(timer)
         }
-        if (immediate && !timer)
+        if (immediate && !timer) 
         {
-            fn.call(null, ...params);
+            fn.call(null, ...params)
         }
-        else
+        else 
         {
-            timer = setTimeout(() =>
+            timer = setTimeout(() => 
             {
-                timer = null;
-                fn.call(null, ...params);
-            }, delay);
+                timer = null
+                fn.call(null, ...params)
+            }, delay)
         }
-    };
-};
+    }
+}

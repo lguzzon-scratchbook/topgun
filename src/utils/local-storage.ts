@@ -1,33 +1,33 @@
-import { isBrowser } from './is-browser';
-import { TGSupportedStorage } from '../types';
-import globalThis from '../utils/window-or-global';
+import type { TGSupportedStorage } from '../types'
+import globalThis from '../utils/window-or-global'
+import { isBrowser } from './is-browser'
 
 export const localStorageAdapter: TGSupportedStorage = {
-    getItem: (key) =>
+    getItem: (key) => 
     {
-        if (!isBrowser())
+        if (!isBrowser()) 
         {
-            return null;
+            return null
         }
 
-        return globalThis.localStorage.getItem(key);
+        return globalThis.localStorage.getItem(key)
     },
-    setItem: (key, value) =>
+    setItem: (key, value) => 
     {
-        if (!isBrowser())
+        if (!isBrowser()) 
         {
-            return;
+            return
         }
 
-        globalThis.localStorage.setItem(key, value);
+        globalThis.localStorage.setItem(key, value)
     },
-    removeItem: (key) =>
+    removeItem: (key) => 
     {
-        if (!isBrowser())
+        if (!isBrowser()) 
         {
-            return;
+            return
         }
 
-        globalThis.localStorage.removeItem(key);
-    },
-};
+        globalThis.localStorage.removeItem(key)
+    }
+}

@@ -1,7 +1,7 @@
-import { TGOptionsGet } from '../types';
-import { replacerSortKeys } from './replacer-sort-keys';
+import type { TGOptionsGet } from '../types'
+import { replacerSortKeys } from './replacer-sort-keys'
 
-export function stringifyOptionsGet(options: TGOptionsGet): string
+export function stringifyOptionsGet(options: TGOptionsGet): string 
 {
-    return JSON.stringify(options || {}, replacerSortKeys);
+    return JSON.stringify(options || {}, replacerSortKeys)
 }
