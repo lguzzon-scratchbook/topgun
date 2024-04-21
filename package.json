@@ -13,7 +13,7 @@
         "clear-package": "node tools/clear-package.js",
         "prepublishOnly": "pnpm run build && pnpm build:package",
         "test": "jest",
-        "lint": "eslint \"src/**/*.ts\" --fix",
+        "lint": "eslint \"src/**/*.ts\" --fix && pnpm dlx @biomejs/biome check --apply ./src",
         "prepare": "simple-git-hooks",
         "release": "dotenv release-it --",
         "tarball": "rimraf tar && pnpm pack --pack-destination ./tar"
@@ -173,7 +173,7 @@
     },
     "devDependencies": {
         "@types/jest": "^29.5.12",
-        "@types/node": "^18.19.30",
+        "@types/node": "^18.19.31",
         "@typescript-eslint/eslint-plugin": "^5.62.0",
         "@typescript-eslint/parser": "^5.62.0",
         "dotenv-cli": "^7.4.1",
