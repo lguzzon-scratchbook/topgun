@@ -13,7 +13,7 @@
         "clear-package": "node tools/clear-package.js",
         "prepublishOnly": "pnpm run build && pnpm build:package",
         "test": "jest",
-        "lint": " eslint \"src/**/*.ts\" --fix ; pnpm dlx @biomejs/biome check --apply ./src",
+        "lint": "pnpm dlx @biomejs/biome check --apply ./src ; eslint \"src/**/*.ts\" --fix",
         "prepare": "simple-git-hooks",
         "release": "dotenv release-it --",
         "tarball": "rimraf tar && pnpm pack --pack-destination ./tar"
@@ -192,11 +192,11 @@
     },
     "lint-staged": {
         "**/*.{ts}": [
-            "pnpm lint"
+            "pnpm dlx @biomejs/biome check --apply ./src && eslint \"src/**/*.ts\" --fix"
         ]
     },
     "simple-git-hooks": {
-        "pre-commit": "pnpm lint-staged"
+        "pre-commit": "npx lint-staged"
     },
     "packageManager": "pnpm@8.15.6+sha256.01c01eeb990e379b31ef19c03e9d06a14afa5250b82e81303f88721c99ff2e6f"
 }
