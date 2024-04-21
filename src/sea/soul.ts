@@ -1,19 +1,19 @@
-export function pubFromSoul(soul: string): string
+export function pubFromSoul(soul: string): string 
 {
-    if (!soul)
+    if (!soul) 
     {
-        return '';
+        return ''
     }
-    const tokens = soul.split('~');
-    const last   = tokens[tokens.length - 1];
-    if (!last)
+    const tokens = soul.split('~')
+    const last = tokens[tokens.length - 1]
+    if (!last) 
     {
-        return '';
+        return ''
     }
-    const coords = last.split('.');
-    if (coords.length < 2)
+    const coords = last.split('.')
+    if (coords.length < 2) 
     {
-        return '';
+        return ''
     }
-    return coords.slice(0, 2).join('.').split('/').shift() as string;
+    return coords.slice(0, 2).join('.').split('/').shift() as string
 }

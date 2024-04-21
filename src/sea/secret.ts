@@ -1,102 +1,96 @@
-import { crypto } from './shims';
-import { Pair } from './pair';
+import type { Pair } from './pair'
+import { crypto } from './shims'
 
 const keysToEcdhJwk = (
     pub: string,
-    d?: string,
-): ['jwk', JsonWebKey, EcKeyImportParams] =>
+    d?: string
+): ['jwk', JsonWebKey, EcKeyImportParams] => 
 {
-    const [x, y] = pub.split('.'); // new
-    const jwk    = d ? { d } : {};
+    const [x, y] = pub.split('.') // new
+    const jwk = d ? { d } : {}
     return [
-        // Use with spread returned value...
+    // Use with spread returned value...
         'jwk',
         Object.assign(jwk, { x: x, y: y, kty: 'EC', crv: 'P-256', ext: true }), // ??? refactor
-        { name: 'ECDH', namedCurve: 'P-256' },
-    ];
-};
+        { name: 'ECDH', namedCurve: 'P-256' }
+    ]
+}
 
 export async function secret(
     key: string,
     pair: Pair,
-    cb?: (value?: string) => void,
-): Promise<string|undefined>
+    cb?: (value?: string) => void
+): Promise<string | undefined> 
 {
-    try
+    try 
     {
-        if (!pair || !pair.epriv || !pair.epub)
+        if (!pair || !pair.epriv || !pair.epub) 
         {
-            console.log('No secret mix.');
-            return;
+            console.log('No secret mix.')
+            return
         }
 
-        const pub                          = key;
-        const epub                         = pair.epub;
-        const epriv                        = pair.epriv;
-        const [format, keyData, algorithm] = keysToEcdhJwk(pub);
-        const props                        = Object.assign(
+        const pub = key
+        const epub = pair.epub
+        const epriv = pair.epriv
+        const [format, keyData, algorithm] = keysToEcdhJwk(pub)
+        const props = Object.assign(
             {
                 public: await crypto.subtle.importKey(
                     format,
                     keyData,
                     algorithm,
                     true,
-                    [],
-                ),
+                    []
+                )
             },
             {
                 name      : 'ECDH',
-                namedCurve: 'P-256',
-            },
-        );
-        const privKeyData                  = keysToEcdhJwk(epub, epriv);
-        const derived                      = await crypto.subtle
+                namedCurve: 'P-256'
+            }
+        )
+        const privKeyData = keysToEcdhJwk(epub, epriv)
+        const derived = await crypto.subtle
             .importKey(...privKeyData, false, ['deriveBits'])
-            .then(async (privKey) =>
+            .then(async (privKey) => 
             {
                 // privateKey scope doesn't leak out from here!
-                const derivedBits = await crypto.subtle.deriveBits(
-                    props,
-                    privKey,
-                    256,
-                );
-                const rawBits     = new Uint8Array(derivedBits);
-                const derivedKey  = await crypto.subtle.importKey(
+                const derivedBits = await crypto.subtle.deriveBits(props, privKey, 256)
+                const rawBits = new Uint8Array(derivedBits)
+                const derivedKey = await crypto.subtle.importKey(
                     'raw',
                     rawBits,
                     {
                         name  : 'AES-GCM',
-                        length: 256,
+                        length: 256
                     },
                     true,
-                    ['encrypt', 'decrypt'],
-                );
+                    ['encrypt', 'decrypt']
+                )
 
-                return crypto.subtle
-                    .exportKey('jwk', derivedKey)
-                    .then(({ k }) => k);
-            });
+                return crypto.subtle.exportKey('jwk', derivedKey).then(({ k }) => k)
+            })
 
-        const r = derived;
-        if (cb)
+        const r = derived
+        if (cb) 
         {
-            try
+            try 
             {
-                cb(r);
+                cb(r)
             }
-            catch (e)
+            catch (e) 
             {
-                console.log(e);
+                console.log(e)
             }
         }
-        return r;
+        return r
     }
-    catch (e)
+    catch (e) 
     {
-        console.error(e);
-        if (cb)
+        console.error(e)
+        if (cb) 
         {
-            cb();
+            cb()
         }
     }
 }

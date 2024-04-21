@@ -1,195 +1,200 @@
-import { isObject, isString } from '@topgunbuild/typed';
-import { IPolicy, IPolicyLex, TGPolicyLexUIOptions, TGPolicyOptions } from '../types';
-import { matchPolicy } from '../utils/match-policy';
+import { isObject, isString } from '@topgunbuild/typed'
+import type {
+    IPolicy,
+    IPolicyLex,
+    TGPolicyLexUIOptions,
+    TGPolicyOptions
+} from '../types'
+import { matchPolicy } from '../utils/match-policy'
 
 function mapPolicyLex(
-    options: TGPolicyLexUIOptions|undefined,
-): IPolicyLex|null
+    options: TGPolicyLexUIOptions | undefined
+): IPolicyLex | null 
 {
-    if (!isObject(options))
+    if (!isObject(options)) 
     {
-        return null;
+        return null
     }
 
-    const lex = Object.keys(options).reduce((accum, key) =>
+    const lex = Object.keys(options).reduce((accum, key) => 
     {
-        const value = options[key];
+        const value = options[key]
 
-        switch (key)
+        switch (key) 
         {
         case 'greaterThan':
-            accum['>'] = value;
-            break;
+            accum['>'] = value
+            break
 
         case 'lessThan':
-            accum['<'] = value;
-            break;
+            accum['<'] = value
+            break
 
         case 'equals':
-            accum['='] = value;
-            break;
+            accum['='] = value
+            break
 
         case 'startsWith':
-            accum['*'] = value;
-            break;
+            accum['*'] = value
+            break
 
         case 'pubInPatch':
-            accum['+'] = '*';
-            break;
+            accum['+'] = '*'
+            break
         }
 
-        return accum;
-    }, {});
+        return accum
+    }, {})
 
-    return Object.keys(lex).length > 0 ? lex : null;
+    return Object.keys(lex).length > 0 ? lex : null
 }
 
-export function createPolicy(options: TGPolicyOptions): IPolicyLex|IPolicy
+export function createPolicy(options: TGPolicyOptions): IPolicyLex | IPolicy 
 {
-    const keyPolicy  = mapPolicyLex(options.key);
-    const pathPolicy = mapPolicyLex(options.path);
+    const keyPolicy = mapPolicyLex(options.key)
+    const pathPolicy = mapPolicyLex(options.path)
 
-    if (!keyPolicy && !pathPolicy)
+    if (!keyPolicy && !pathPolicy) 
     {
-        return mapPolicyLex(options) || {};
+        return mapPolicyLex(options) || {}
     }
 
-    const policy: IPolicy = {};
+    const policy: IPolicy = {}
 
-    if (keyPolicy)
+    if (keyPolicy) 
     {
-        policy['.'] = keyPolicy;
+        policy['.'] = keyPolicy
     }
-    if (pathPolicy)
+    if (pathPolicy) 
     {
-        policy['#'] = pathPolicy;
+        policy['#'] = pathPolicy
     }
 
-    return policy;
+    return policy
 }
 
-export class Policy
+export class Policy 
 {
-    private readonly policy: IPolicyLex|IPolicy;
-    private readonly path: string;
-    private readonly key: string;
-    private readonly fullPath: string;
-    private readonly certificant: string;
+    private readonly policy: IPolicyLex | IPolicy
+    private readonly path: string
+    private readonly key: string
+    private readonly fullPath: string
+    private readonly certificant: string
 
     /**
-     * Constructor
-     */
+   * Constructor
+   */
     constructor(
-        policy: IPolicyLex|IPolicy,
+        policy: IPolicyLex | IPolicy,
         path: string,
         key: string,
-        certificant: string,
-    )
+        certificant: string
+    ) 
     {
-        this.policy      = policy;
-        this.path        = path || '';
-        this.key         = key || '';
-        this.fullPath    = this.path + '/' + this.key;
-        this.certificant = certificant || '';
+        this.policy = policy
+        this.path = path || ''
+        this.key = key || ''
+        this.fullPath = this.path + '/' + this.key
+        this.certificant = certificant || ''
     }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Accessors
     // -----------------------------------------------------------------------------------------------------
 
-    get pathPolicy(): IPolicyLex|undefined
+    get pathPolicy(): IPolicyLex | undefined 
     {
-        return this.policy['#'];
+        return this.policy['#']
     }
 
-    get keyPolicy(): IPolicyLex|undefined
+    get keyPolicy(): IPolicyLex | undefined 
     {
-        return this.policy['.'];
+        return this.policy['.']
     }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Public methods
     // -----------------------------------------------------------------------------------------------------
 
-    match(): boolean
+    match(): boolean 
     {
-        let valid = true;
-        if (this.hasPathPolicy() && !matchPolicy(this.path, this.policy['#']))
+        let valid = true
+        if (this.hasPathPolicy() && !matchPolicy(this.path, this.policy['#'])) 
         {
-            valid = false;
+            valid = false
         }
-        if (this.hasKeyPolicy() && matchPolicy(this.key, this.policy['.']))
+        if (this.hasKeyPolicy() && matchPolicy(this.key, this.policy['.'])) 
         {
-            valid = false;
+            valid = false
         }
-        if (this.hasPlainPolicy())
+        if (this.hasPlainPolicy()) 
         {
-            valid = matchPolicy(this.fullPath, this.policy as IPolicyLex);
+            valid = matchPolicy(this.fullPath, this.policy as IPolicyLex)
         }
 
-        return valid;
+        return valid
     }
 
-    hasCertificatePathError(): boolean
+    hasCertificatePathError(): boolean 
     {
-        let valid = true;
+        let valid = true
 
         if (
             this.needCertInPath(this.keyPolicy) &&
-            !this.key.includes(this.certificant)
-        )
+      !this.key.includes(this.certificant)
+        ) 
         {
-            valid = false;
+            valid = false
         }
         if (
             this.needCertInPath(this.pathPolicy) &&
-            !this.path.includes(this.certificant)
-        )
+      !this.path.includes(this.certificant)
+        ) 
         {
-            valid = false;
+            valid = false
         }
         if (
             this.needCertInPath(this.policy as IPolicyLex) &&
-            !this.fullPath.includes(this.certificant)
-        )
+      !this.fullPath.includes(this.certificant)
+        ) 
         {
-            valid = false;
+            valid = false
         }
 
-        return !valid;
+        return !valid
     }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Private methods
     // -----------------------------------------------------------------------------------------------------
 
-    private needCertInPath(options: IPolicyLex|string|undefined): boolean
+    private needCertInPath(options: IPolicyLex | string | undefined): boolean 
     {
-        return isObject(options) && options['+'] === '*';
+        return isObject(options) && options['+'] === '*'
     }
 
-    private hasPlainPolicy(): boolean
+    private hasPlainPolicy(): boolean 
     {
         return (
             isString(this.policy['=']) ||
-            isString(this.policy['*']) ||
-            isString(this.policy['>']) ||
-            isString(this.policy['<'])
-        );
+      isString(this.policy['*']) ||
+      isString(this.policy['>']) ||
+      isString(this.policy['<'])
+        )
     }
 
-    private hasPathPolicy(): boolean
+    private hasPathPolicy(): boolean 
     {
-        return this.hasPolicy(this.pathPolicy);
+        return this.hasPolicy(this.pathPolicy)
     }
 
-    private hasKeyPolicy(): boolean
+    private hasKeyPolicy(): boolean 
     {
-        return this.hasPolicy(this.keyPolicy);
+        return this.hasPolicy(this.keyPolicy)
     }
 
-    private hasPolicy(options: IPolicyLex|string|undefined): boolean
+    private hasPolicy(options: IPolicyLex | string | undefined): boolean 
     {
-        return isString(options) || isObject(options);
+        return isString(options) || isObject(options)
     }
 }

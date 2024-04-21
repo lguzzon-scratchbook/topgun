@@ -1,85 +1,85 @@
-import { crypto, Buffer } from './shims';
-import { isObject, isString } from '@topgunbuild/typed';
-import { ecdsa, jwk, parse } from './settings';
-import { sha256 } from './sha256';
-import { Pair } from './pair';
-import { TGEncryptData } from '../types';
+import { isObject, isString } from '@topgunbuild/typed'
+import type { TGEncryptData } from '../types'
+import type { Pair } from './pair'
+import { ecdsa, jwk, parse } from './settings'
+import { sha256 } from './sha256'
+import { crypto, Buffer } from './shims'
 
 const DEFAULT_OPTS: {
-    readonly encode?: string;
-    readonly raw?: boolean;
+    readonly encode?: string
+    readonly raw?: boolean
     readonly check?: {
-        readonly m: any;
-        readonly s: string;
-    };
+        readonly m: any
+        readonly s: string
+    }
 } = {
-    encode: 'base64',
-};
+    encode: 'base64'
+}
 
-function importKey(pub: string): Promise<any>
+function importKey(pub: string): Promise<any> 
 {
-    const token   = jwk(pub);
+    const token = jwk(pub)
     const promise = crypto.subtle.importKey('jwk', token, ecdsa.pair, false, [
-        'verify',
-    ]);
-    return promise;
+        'verify'
+    ])
+    return promise
 }
 
 export async function verifyHashSignature(
     hash: string,
     signature: string,
     pub: string,
-    opt = DEFAULT_OPTS,
-): Promise<boolean>
+    opt = DEFAULT_OPTS
+): Promise<boolean> 
 {
-    const encoding = opt.encode || DEFAULT_OPTS.encode;
-    const key      = await importKey(pub);
-    const buf      = Buffer.from(signature, encoding);
-    const sig      = new Uint8Array(buf);
+    const encoding = opt.encode || DEFAULT_OPTS.encode
+    const key = await importKey(pub)
+    const buf = Buffer.from(signature, encoding)
+    const sig = new Uint8Array(buf)
 
     if (
         await crypto.subtle.verify(
             ecdsa.sign,
             key,
             sig,
-            new Uint8Array(Buffer.from(hash, 'hex')),
+            new Uint8Array(Buffer.from(hash, 'hex'))
         )
-    )
+    ) 
     {
-        return true;
+        return true
     }
 
-    return false;
+    return false
 }
 
 export async function verifySignature(
     text: string,
     signature: string,
     pub: string,
-    opt = DEFAULT_OPTS,
-): Promise<boolean>
+    opt = DEFAULT_OPTS
+): Promise<boolean> 
 {
-    const hash = await sha256(isString(text) ? text : JSON.stringify(text));
-    return verifyHashSignature(hash.toString('hex'), signature, pub, opt);
+    const hash = await sha256(isString(text) ? text : JSON.stringify(text))
+    return verifyHashSignature(hash.toString('hex'), signature, pub, opt)
 }
 
 export async function verify(
-    data: string|{readonly m: string; readonly s: string},
-    pubOrPair: string|Pair,
-    opt = DEFAULT_OPTS,
-): Promise<false|TGEncryptData>
+    data: string | { readonly m: string; readonly s: string },
+    pubOrPair: string | Pair,
+    opt = DEFAULT_OPTS
+): Promise<false | TGEncryptData> 
 {
-    try
+    try 
     {
         const pub =
-                  isObject(pubOrPair) && isString(pubOrPair.pub)
-                      ? pubOrPair.pub
-                      : isString(pubOrPair)
-                          ? pubOrPair
-                          : '';
+      isObject(pubOrPair) && isString(pubOrPair.pub)
+          ? pubOrPair.pub
+          : isString(pubOrPair)
+              ? pubOrPair
+              : ''
 
-        const json = parse(data);
-        if (await verifySignature(json.m, json.s, pub, opt))
+        const json = parse(data)
+        if (await verifySignature(json.m, json.s, pub, opt)) 
         {
             return {
                 ct: json.ct,
@@ -87,13 +87,13 @@ export async function verify(
                 s : json.s,
                 e : json.m?.e,
                 w : json.m?.w,
-                c : json.m?.c,
-            };
+                c : json.m?.c
+            }
         }
-        return false;
+        return false
     }
-    catch (e)
+    catch (e) 
     {
-        return false;
+        return false
     }
 }
