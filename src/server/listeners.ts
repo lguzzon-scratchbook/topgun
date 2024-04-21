@@ -1,115 +1,124 @@
-import { isString } from '@topgunbuild/typed';
-import { TGSocketServer, TGSocket } from '@topgunbuild/socket/server';
-import { TGEncryptData, TGMessage } from '../types';
-import { decrypt, verify, work } from '../sea';
-import { TGLoggerType } from '../logger';
-import { TGServerOptions } from './server-options';
+import type { TGSocket, TGSocketServer } from '@topgunbuild/socket/server'
+import { isString } from '@topgunbuild/typed'
+import type { TGLoggerType } from '../logger'
+import { decrypt, verify, work } from '../sea'
+import type { TGEncryptData, TGMessage } from '../types'
+import type { TGServerOptions } from './server-options'
 
-export class Listeners
+export class Listeners 
 {
-    readonly inboundPeerConnections: Map<string, TGSocket>;
-    closed: boolean;
+    readonly inboundPeerConnections: Map<string, TGSocket>
+    closed: boolean
 
     /**
-     * Constructor
-     */
+   * Constructor
+   */
     constructor(
         private readonly gateway: TGSocketServer,
         private readonly logger: TGLoggerType,
         private readonly options: TGServerOptions,
         private readonly serverName: string
-    )
+    ) 
     {
-        this.inboundPeerConnections = new Map<string, TGSocket>();
-        this.closed                 = false;
+        this.inboundPeerConnections = new Map<string, TGSocket>()
+        this.closed = false
     }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Public methods
     // -----------------------------------------------------------------------------------------------------
 
-    close(): void
+    close(): void 
     {
-        this.closed = true;
+        this.closed = true
     }
 
-    createListeners(): void
+    createListeners(): void 
     {
-        this.connectionListener();
-        this.readyListener();
-        this.errorListener();
-        this.disconnectionListener();
+        this.connectionListener()
+        this.readyListener()
+        this.errorListener()
+        this.disconnectionListener()
     }
 
     /**
-     * Logs disconnection
-     */
-    async disconnectionListener(): Promise<void>
+   * Logs disconnection
+   */
+    async disconnectionListener(): Promise<void> 
     {
-        for await (const { socket, code, reason } of this.gateway.listener('disconnection'))
+        for await (const { socket, code, reason } of this.gateway.listener(
+            'disconnection'
+        )) 
         {
-            if (!this.closed)
+            if (!this.closed) 
             {
-                this.logger.debug(`Socket ${socket.id} disconnected with code ${code}${!!reason ? ' due to ' + reason : ''}`);
+                this.logger.debug(
+                    `Socket ${socket.id} disconnected with code ${code}${
+                        !!reason ? ' due to ' + reason : ''
+                    }`
+                )
             }
 
-            if (this.inboundPeerConnections.has(socket.id))
+            if (this.inboundPeerConnections.has(socket.id)) 
             {
-                this.inboundPeerConnections.delete(socket.id);
+                this.inboundPeerConnections.delete(socket.id)
             }
         }
     }
 
     /**
-     * Set up a loop to handle websocket connections.
-     */
-    async connectionListener(): Promise<void>
+   * Set up a loop to handle websocket connections.
+   */
+    async connectionListener(): Promise<void> 
     {
-        for await (const { socket } of this.gateway.listener('connection'))
+        for await (const { socket } of this.gateway.listener('connection')) 
         {
-            this.logger.debug(`Socket ${socket.id} is connected`);
-            this.#authListener(socket);
-            this.#peerAutListener(socket);
+            this.logger.debug(`Socket ${socket.id} is connected`)
+            this.#authListener(socket)
+            this.#peerAutListener(socket)
         }
     }
 
     /**
-     * Logs when the server is ready
-     */
-    async readyListener(): Promise<void>
+   * Logs when the server is ready
+   */
+    async readyListener(): Promise<void> 
     {
-        for await (const data of this.gateway.listener('ready'))
+        for await (const data of this.gateway.listener('ready')) 
         {
-            this.logger.log('TopGun Server is ready');
+            this.logger.log('TopGun Server is ready')
         }
     }
 
     /**
-     * Logs out errors
-     */
-    async errorListener(): Promise<void>
+   * Logs out errors
+   */
+    async errorListener(): Promise<void> 
     {
-        for await (const { error } of this.gateway.listener('error'))
+        for await (const { error } of this.gateway.listener('error')) 
         {
-            this.logger.error(error);
+            this.logger.error(error)
         }
     }
 
     /**
-     * Publish changes to peers
-     */
-    publishChangeLog(message: TGMessage): void
+   * Publish changes to peers
+   */
+    publishChangeLog(message: TGMessage): void 
     {
-        this.inboundPeerConnections.forEach((socket: TGSocket) =>
+        this.inboundPeerConnections.forEach((socket: TGSocket) => 
         {
-            if (socket.state === socket.OPEN && socket.authState === socket.AUTHENTICATED)
+            if (
+                socket.state === socket.OPEN &&
+        socket.authState === socket.AUTHENTICATED
+            ) 
             {
                 socket.transmit('#publish', {
                     channel: 'topgun/changelog',
                     data   : message
-                });
+                })
             }
-        });
+        })
     }
 
     // -----------------------------------------------------------------------------------------------------
@@ -117,152 +126,157 @@ export class Listeners
     // -----------------------------------------------------------------------------------------------------
 
     /**
-     * RPC listener for a socket's login
-     */
-    async #authListener(socket: TGSocket): Promise<void>
+   * RPC listener for a socket's login
+   */
+    async #authListener(socket: TGSocket): Promise<void> 
     {
-        for await (const request of socket.procedure('login'))
+        for await (const request of socket.procedure('login')) 
         {
-            this.#loginHandler(socket, request);
+            this.#loginHandler(socket, request)
         }
     }
 
     /**
-     * RPC listener for a socket's login
-     */
-    async #peerAutListener(socket: TGSocket): Promise<void>
+   * RPC listener for a socket's login
+   */
+    async #peerAutListener(socket: TGSocket): Promise<void> 
     {
-        for await (const request of socket.procedure('peerLogin'))
+        for await (const request of socket.procedure('peerLogin')) 
         {
-            this.#peerLoginHandler(socket, request, this.options.peerSecretKey, this.serverName).then((isAuth) =>
+            this.#peerLoginHandler(
+                socket,
+                request,
+                this.options.peerSecretKey,
+                this.serverName
+            ).then((isAuth) => 
             {
-                if (isAuth)
+                if (isAuth) 
                 {
-                    this.inboundPeerConnections.set(socket.id, socket);
+                    this.inboundPeerConnections.set(socket.id, socket)
                 }
-            });
+            })
         }
     }
 
     /**
-     * Authenticate a client connection for extra privileges
-     */
+   * Authenticate a client connection for extra privileges
+   */
     async #loginHandler(
         socket: TGSocket,
         request: {
             data: {
-                pub: string;
+                pub: string
                 proof: {
-                    m: string;
-                    s: string;
-                };
-            },
-            end: (reason?: string) => void,
+                    m: string
+                    s: string
+                }
+            }
+            end: (reason?: string) => void
             error: (error?: Error) => void
-        },
-    ): Promise<void>
+        }
+    ): Promise<void> 
     {
-        const data = request.data;
+        const data = request.data
 
-        if (!data.pub || !data.proof)
+        if (!data.pub || !data.proof) 
         {
-            request.end('Missing login info');
-            return;
+            request.end('Missing login info')
+            return
         }
 
-        try
+        try 
         {
-            const [socketId, timestampStr] = data.proof.m.split('/');
-            const timestamp                = parseInt(timestampStr, 10);
+            const [socketId, timestampStr] = data.proof.m.split('/')
+            const timestamp = Number.parseInt(timestampStr, 10)
 
-            if (!socketId || socketId !== socket.id)
+            if (!socketId || socketId !== socket.id) 
             {
-                request.error(new Error('Socket ID doesn\'t match'));
-                return;
+                request.error(new Error('Socket ID doesn\'t match'))
+                return
             }
 
-            const isVerified = await verify(data.proof, data.pub);
+            const isVerified = await verify(data.proof, data.pub)
 
-            if (isVerified)
+            if (isVerified) 
             {
                 await socket.setAuthToken({
                     pub: data.pub,
-                    timestamp,
-                });
-                this.logger.debug(`Socket ${socket.id} is auth!`);
-                request.end();
+                    timestamp
+                })
+                this.logger.debug(`Socket ${socket.id} is auth!`)
+                request.end()
             }
-            else
+            else 
             {
-                request.end('Invalid login');
+                request.end('Invalid login')
             }
         }
-        catch (err)
+        catch (err) 
         {
-            request.end('Invalid login');
+            request.end('Invalid login')
         }
     }
 
     /**
-     * Authenticate a peer connection
-     */
+   * Authenticate a peer connection
+   */
     async #peerLoginHandler(
         socket: TGSocket,
         request: {
             data: {
-                challenge: string;
-                data: TGEncryptData;
-            },
-            end: (reason?: string) => void,
+                challenge: string
+                data: TGEncryptData
+            }
+            end: (reason?: string) => void
             error: (error?: Error) => void
         },
         peerSecretKey: string,
         serverName: string
-    ): Promise<boolean>
+    ): Promise<boolean> 
     {
-        const data = request.data;
+        const data = request.data
 
-        if (!data?.challenge || !data?.data)
+        if (!data?.challenge || !data?.data) 
         {
-            request.end('Missing peer auth info');
-            return false;
+            request.end('Missing peer auth info')
+            return false
         }
 
-        const [socketId, timestampStr] = data.challenge.split('/');
-        const timestamp                = parseInt(timestampStr, 10);
+        const [socketId, timestampStr] = data.challenge.split('/')
+        const timestamp = Number.parseInt(timestampStr, 10)
 
-        if (!socketId || socketId !== socket.id)
+        if (!socketId || socketId !== socket.id) 
         {
-            request.error(new Error('Socket ID doesn\'t match'));
-            return false;
+            request.error(new Error('Socket ID doesn\'t match'))
+            return false
         }
 
-        try
+        try 
         {
-            const hash      = await work(data.challenge, peerSecretKey);
-            const decrypted = await decrypt<{peerUri: string}>(data.data, hash);
+            const hash = await work(data.challenge, peerSecretKey)
+            const decrypted = await decrypt<{ peerUri: string }>(data.data, hash)
 
-            if (isString(decrypted?.peerUri))
+            if (isString(decrypted?.peerUri)) 
             {
                 await socket.setAuthToken({
                     peerUri: decrypted.peerUri,
                     serverName,
-                    timestamp,
-                });
-                this.logger.debug(`Peer socket ${socket.id} is auth!`);
-                request.end();
-                return true;
+                    timestamp
+                })
+                this.logger.debug(`Peer socket ${socket.id} is auth!`)
+                request.end()
+                return true
             }
-            else
+            else 
             {
-                request.end('Invalid auth key');
-                return false;
+                request.end('Invalid auth key')
+                return false
             }
         }
-        catch (err)
+        catch (err) 
         {
-            request.end('Invalid auth key');
-            return false;
+            request.end('Invalid auth key')
+            return false
         }
     }
 }

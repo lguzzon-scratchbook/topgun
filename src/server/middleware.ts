@@ -1,39 +1,43 @@
-import { TGSocketServer, RequestObject } from '@topgunbuild/socket/server';
-import { TGServerOptions } from './server-options';
-import { TGGraphAdapter, TGGraphData, TGMessage, TGOptionsGet } from '../types';
-import { pseudoRandomText } from '../sea';
-import { TGExtendedLoggerType } from '../logger';
+import type { RequestObject, TGSocketServer } from '@topgunbuild/socket/server'
+import type { TGExtendedLoggerType } from '../logger'
+import { pseudoRandomText } from '../sea'
+import type {
+    TGGraphAdapter,
+    TGGraphData,
+    TGMessage,
+    TGOptionsGet
+} from '../types'
+import type { TGServerOptions } from './server-options'
 
-export class Middleware
+export class Middleware 
 {
     /**
-     * Constructor
-     */
+   * Constructor
+   */
     constructor(
         private readonly serverName: string,
         private readonly socketServer: TGSocketServer,
         private readonly options: TGServerOptions,
         private readonly adapter: TGGraphAdapter,
         private readonly logger: TGExtendedLoggerType
-    )
-    {
-    }
+    ) 
+    {}
 
     // -----------------------------------------------------------------------------------------------------
     // @ Public methods
     // -----------------------------------------------------------------------------------------------------
 
-    setupMiddleware(): void
+    setupMiddleware(): void 
     {
         this.socketServer.addMiddleware(
             this.socketServer.MIDDLEWARE_SUBSCRIBE,
             this.#outboundMiddlewareHandler.bind(this)
-        );
+        )
 
         this.socketServer.addMiddleware(
             this.socketServer.MIDDLEWARE_PUBLISH_IN,
             this.#inboundMiddlewareHandler.bind(this)
-        );
+        )
     }
 
     // -----------------------------------------------------------------------------------------------------
@@ -41,51 +45,49 @@ export class Middleware
     // -----------------------------------------------------------------------------------------------------
 
     /**
-     * Handles inbound socket requests
-     * Handle `put` queries
-     */
-    #inboundMiddlewareHandler(req: RequestObject): void
+   * Handles inbound socket requests
+   * Handle `put` queries
+   */
+    #inboundMiddlewareHandler(req: RequestObject): void 
     {
-        if (req.channel === 'topgun/put')
+        if (req.channel === 'topgun/put') 
         {
-            const msg = req.data as TGMessage;
+            const msg = req.data as TGMessage
 
             // Only allow if the connecting node was not an originator
-            if (this.#originatorCheck(msg))
+            if (this.#originatorCheck(msg)) 
             {
-                this.#processPut(msg).then((data) =>
+                this.#processPut(msg).then((data) => 
                 {
                     req.socket.transmit('#publish', {
                         channel: `topgun/@${msg['#']}`,
                         data
-                    });
+                    })
                 })
             }
         }
     }
 
     /**
-     * Handles all traffic out to connected sockets, this is always publish out
-     * Handle `get` queries
-     */
-    async #outboundMiddlewareHandler(req: RequestObject): Promise<void>
+   * Handles all traffic out to connected sockets, this is always publish out
+   * Handle `get` queries
+   */
+    async #outboundMiddlewareHandler(req: RequestObject): Promise<void> 
     {
-        if (req.channel === 'topgun/put')
+        if (req.channel === 'topgun/put') 
         {
-            return;
+            return
         }
 
-        const soul = req.channel.replace(/^topgun\/nodes\//, '');
+        const soul = req.channel.replace(/^topgun\/nodes\//, '')
 
-        if (!soul || soul === req.channel)
+        if (!soul || soul === req.channel) 
         {
-            return;
+            return
         }
 
-        const opts  = req.data as TGOptionsGet|undefined;
-        const msgId = Math.random()
-            .toString(36)
-            .slice(2);
+        const opts = req.data as TGOptionsGet | undefined
+        const msgId = Math.random().toString(36).slice(2)
 
         this.#readNodes(opts)
             .then(graphData => ({
@@ -96,9 +98,9 @@ export class Middleware
                     'originators': { [this.serverName]: 1 }
                 }
             }))
-            .catch((e) =>
+            .catch((e) => 
             {
-                this.logger.warn(e.stack || e);
+                this.logger.warn(e.stack || e)
                 return {
                     channel: req.channel,
                     data   : {
@@ -108,53 +110,53 @@ export class Middleware
                     }
                 }
             })
-            .then((msg: {channel: string, data: TGMessage}) =>
+            .then((msg: { channel: string; data: TGMessage }) => 
             {
-                req.socket.transmit('#publish', msg);
+                req.socket.transmit('#publish', msg)
             })
     }
 
     /**
-     * Check the originator attribute on the data to see if the intended target has already handled this data,
-     * this is to prevent loop backs
-     */
-    #originatorCheck(msg: TGMessage)
+   * Check the originator attribute on the data to see if the intended target has already handled this data,
+   * this is to prevent loop backs
+   */
+    #originatorCheck(msg: TGMessage) 
     {
-        return !(msg && msg.originators && msg.originators[this.serverName]);
+        return !(msg && msg.originators && msg.originators[this.serverName])
     }
 
-    #readNodes(opts: TGOptionsGet): Promise<TGGraphData>
+    #readNodes(opts: TGOptionsGet): Promise<TGGraphData> 
     {
-        return this.adapter.get(opts);
+        return this.adapter.get(opts)
     }
 
-    async #processPut(msg: TGMessage): Promise<TGMessage>
+    async #processPut(msg: TGMessage): Promise<TGMessage> 
     {
-        const msgId = pseudoRandomText();
+        const msgId = pseudoRandomText()
 
-        try
+        try 
         {
-            if (msg.put)
+            if (msg.put) 
             {
-                await this.adapter.put(msg.put, msg.originators);
+                await this.adapter.put(msg.put, msg.originators)
             }
 
             return {
                 '#'  : msgId,
                 '@'  : msg['#'],
                 'err': null,
-                'ok' : true,
-            };
+                'ok' : true
+            }
         }
-        catch (e)
+        catch (e) 
         {
-            this.logger.error(e);
+            this.logger.error(e)
             return {
                 '#'  : msgId,
                 '@'  : msg['#'],
                 'err': 'Error saving',
-                'ok' : false,
-            };
+                'ok' : false
+            }
         }
     }
 }

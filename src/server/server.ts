@@ -1,42 +1,58 @@
-import { Struct, Result, ok, isErr, isFunction, isObject, isDefined, isString, isBoolean } from '@topgunbuild/typed';
-import { AsyncStreamEmitter } from '@topgunbuild/async-stream-emitter';
-import { attach, listen, TGSocketServer } from '@topgunbuild/socket/server';
-import { pseudoRandomText } from '../sea';
-import { TGGraphAdapter, TGGraphData, TGMessage, TGOriginators, TGPartialNode } from '../types';
-import { TGServerOptions } from './server-options';
-import { createMemoryAdapter } from '../memory-adapter';
-import { createValidator } from '../validator';
-import { Middleware } from './middleware';
-import { uuidv4 } from '../utils/uuidv4';
-import { MAX_KEY_SIZE, MAX_VALUE_SIZE } from '../storage';
-import { TGFederationAdapter } from '../federation-adapter/federation-adapter';
-import { TGPeers } from '../federation-adapter/peers';
-import { createLogger, TGLoggerType } from '../logger';
-import { Listeners } from './listeners';
-import { TGBroker } from './broker';
-import { defaultLoggerOptions } from '../logger/constants';
+import { AsyncStreamEmitter } from '@topgunbuild/async-stream-emitter'
+import { type TGSocketServer, attach, listen } from '@topgunbuild/socket/server'
+import {
+    type Result,
+    type Struct,
+    isBoolean,
+    isDefined,
+    isErr,
+    isFunction,
+    isObject,
+    isString,
+    ok
+} from '@topgunbuild/typed'
+import { TGFederationAdapter } from '../federation-adapter/federation-adapter'
+import { TGPeers } from '../federation-adapter/peers'
+import { type TGLoggerType, createLogger } from '../logger'
+import { defaultLoggerOptions } from '../logger/constants'
+import { createMemoryAdapter } from '../memory-adapter'
+import { pseudoRandomText } from '../sea'
+import { MAX_KEY_SIZE, MAX_VALUE_SIZE } from '../storage'
+import type {
+    TGGraphAdapter,
+    TGGraphData,
+    TGMessage,
+    TGOriginators,
+    TGPartialNode
+} from '../types'
+import { uuidv4 } from '../utils/uuidv4'
+import { createValidator } from '../validator'
+import { TGBroker } from './broker'
+import { Listeners } from './listeners'
+import { Middleware } from './middleware'
+import type { TGServerOptions } from './server-options'
 
-export class TGServer extends AsyncStreamEmitter<any>
+export class TGServer extends AsyncStreamEmitter<any> 
 {
-    name: string;
-    readonly adapter: TGFederationAdapter;
-    readonly internalAdapter: TGGraphAdapter;
-    readonly gateway: TGSocketServer;
-    readonly options: TGServerOptions;
-    readonly middleware: Middleware;
-    readonly peers: TGPeers;
-    readonly validator: Struct<TGGraphData>;
-    readonly listeners: Listeners;
+    name: string
+    readonly adapter: TGFederationAdapter
+    readonly internalAdapter: TGGraphAdapter
+    readonly gateway: TGSocketServer
+    readonly options: TGServerOptions
+    readonly middleware: Middleware
+    readonly peers: TGPeers
+    readonly validator: Struct<TGGraphData>
+    readonly listeners: Listeners
 
-    private logger: TGLoggerType;
-    private peersDisconnector: () => void;
+    private logger: TGLoggerType
+    private peersDisconnector: () => void
 
     /**
-     * Constructor
-     */
-    constructor(options?: TGServerOptions)
+   * Constructor
+   */
+    constructor(options?: TGServerOptions) 
     {
-        super();
+        super()
         const defaultOptions: TGServerOptions = {
             brokerEngine          : new TGBroker(),
             maxKeySize            : MAX_KEY_SIZE,
@@ -49,66 +65,71 @@ export class TGServer extends AsyncStreamEmitter<any>
             log                   : {
                 enabled: true
             }
-        };
-
-        this.options = Object.assign(defaultOptions, options || {});
-
-        if (this.options.httpServer)
-        {
-            this.gateway            = attach(this.options.httpServer, this.options);
-            this.gateway.httpServer = this.options.httpServer;
-        }
-        else
-        {
-            this.gateway = listen(this.options.port, this.options);
         }
 
-        this.#persistServerName();
-        this.#createLogger();
+        this.options = Object.assign(defaultOptions, options || {})
 
-        this.validator       = createValidator();
-        this.internalAdapter = this.options.adapter || createMemoryAdapter(options);
-        this.peers           = new TGPeers(
+        if (this.options.httpServer) 
+        {
+            this.gateway = attach(this.options.httpServer, this.options)
+            this.gateway.httpServer = this.options.httpServer
+        }
+        else 
+        {
+            this.gateway = listen(this.options.port, this.options)
+        }
+
+        this.#persistServerName()
+        this.#createLogger()
+
+        this.validator = createValidator()
+        this.internalAdapter = this.options.adapter || createMemoryAdapter(options)
+        this.peers = new TGPeers(
             this.options.peers,
             this.options.peerSecretKey,
             this.logger.extend('Peers')
-        );
-        this.adapter         = this.#federateInternalAdapter(this.internalAdapter);
-        this.middleware      = new Middleware(
+        )
+        this.adapter = this.#federateInternalAdapter(this.internalAdapter)
+        this.middleware = new Middleware(
             this.name,
             this.gateway,
             this.options,
             this.adapter,
             this.logger.extend('Middleware')
-        );
-        this.listeners       = new Listeners(this.gateway, this.logger, this.options, this.name);
-        this.#run();
+        )
+        this.listeners = new Listeners(
+            this.gateway,
+            this.logger,
+            this.options,
+            this.name
+        )
+        this.#run()
     }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Public methods
     // -----------------------------------------------------------------------------------------------------
 
-    waitForReady(): Promise<void>
+    waitForReady(): Promise<void> 
     {
-        return this.gateway.listener('ready').once();
+        return this.gateway.listener('ready').once()
     }
 
-    waitForPeersAuth(): Promise<void[]>
+    waitForPeersAuth(): Promise<void[]> 
     {
-        return this.peers.waitForAuth();
+        return this.peers.waitForAuth()
     }
 
-    async close(): Promise<void>
+    async close(): Promise<void> 
     {
-        this.listeners.close();
-        if (isFunction(this.gateway.httpServer?.close))
+        this.listeners.close()
+        if (isFunction(this.gateway.httpServer?.close)) 
         {
-            this.gateway.httpServer.close();
+            this.gateway.httpServer.close()
         }
-        await this.gateway.close();
-        this.peersDisconnector();
-        await this.peers.disconnect();
+        await this.gateway.close()
+        this.peersDisconnector()
+        await this.peers.disconnect()
     }
 
     // -----------------------------------------------------------------------------------------------------
@@ -116,53 +137,53 @@ export class TGServer extends AsyncStreamEmitter<any>
     // -----------------------------------------------------------------------------------------------------
 
     /**
-     * Run server
-     */
-    #run(): void
+   * Run server
+   */
+    #run(): void 
     {
-        this.middleware.setupMiddleware();
-        this.listeners.createListeners();
-        this.peersDisconnector = this.adapter.connectToPeers();
+        this.middleware.setupMiddleware()
+        this.listeners.createListeners()
+        this.peersDisconnector = this.adapter.connectToPeers()
     }
 
     /**
-     * Wrap internal adapter
-     */
-    #federateInternalAdapter(adapter: TGGraphAdapter): TGFederationAdapter
+   * Wrap internal adapter
+   */
+    #federateInternalAdapter(adapter: TGGraphAdapter): TGFederationAdapter 
     {
         const withPublish: TGGraphAdapter = {
             ...adapter,
-            put: async (graph: TGGraphData, originators?: TGOriginators) =>
+            put: async (graph: TGGraphData, originators?: TGOriginators) => 
             {
-                const diff = await adapter.put(graph);
+                const diff = await adapter.put(graph)
 
-                if (diff)
+                if (diff) 
                 {
                     this.#publishIsDiff({
                         '#'  : pseudoRandomText(),
                         'put': diff,
                         originators
-                    });
+                    })
                 }
 
-                return diff;
-            },
-        };
+                return diff
+            }
+        }
 
         const withValidation = {
             ...withPublish,
-            put: async (graph: TGGraphData, originators?: TGOriginators) =>
+            put: async (graph: TGGraphData, originators?: TGOriginators) => 
             {
-                const result = this.#validatePut(graph);
+                const result = this.#validatePut(graph)
 
-                if (isErr(result))
+                if (isErr(result)) 
                 {
-                    throw result.error;
+                    throw result.error
                 }
 
-                return withPublish.put(graph, originators);
-            },
-        };
+                return withPublish.put(graph, originators)
+            }
+        }
 
         return new TGFederationAdapter(
             this.name,
@@ -178,117 +199,116 @@ export class TGServer extends AsyncStreamEmitter<any>
     }
 
     /**
-     * Send put data to node subscribers as a diff
-     */
-    #publishIsDiff(msg: TGMessage): void
+   * Send put data to node subscribers as a diff
+   */
+    #publishIsDiff(msg: TGMessage): void 
     {
-        const msgId       = msg['#'] || uuidv4();
-        const diff        = msg.put;
-        const originators = msg.originators;
+        const msgId = msg['#'] || uuidv4()
+        const diff = msg.put
+        const originators = msg.originators
 
-        if (!diff)
+        if (!diff) 
         {
-            return;
+            return
         }
 
-        for (const soul in diff)
+        for (const soul in diff) 
         {
-            if (!soul)
+            if (!soul) 
             {
-                continue;
+                continue
             }
 
-            const nodeDiff = diff[soul];
+            const nodeDiff = diff[soul]
 
             // if (!nodeDiff)
             // {
             //     continue;
             // }
 
-            this.#publishDiff(soul, msgId, nodeDiff, originators);
+            this.#publishDiff(soul, msgId, nodeDiff, originators)
         }
     }
 
     /**
-     * Send put data to all node subscribers
-     */
+   * Send put data to all node subscribers
+   */
     #publishDiff(
         soul: string,
         msgId: string,
         nodeDiff: TGPartialNode,
         originators?: Record<string, number>
-    ): void
+    ): void 
     {
         const message: TGMessage = {
             '#'  : `${msgId}/${soul}`,
             'put': {
-                [soul]: nodeDiff,
+                [soul]: nodeDiff
             },
             'originators': {
                 ...(originators || {}),
                 [this.name]: 1
             }
-        };
+        }
 
-        this.gateway.exchange.publish(`topgun/nodes/${soul}`, message);
-        this.listeners.publishChangeLog(message);
+        this.gateway.exchange.publish(`topgun/nodes/${soul}`, message)
+        this.listeners.publishChangeLog(message)
     }
 
     /**
-     * Validate put operation
-     */
-    #validatePut(graph: TGGraphData): Result<TGGraphData>
+   * Validate put operation
+   */
+    #validatePut(graph: TGGraphData): Result<TGGraphData> 
     {
-        if (this.options.disableGraphValidation)
+        if (this.options.disableGraphValidation) 
         {
-            return ok(graph);
+            return ok(graph)
         }
-        return this.validator(graph);
+        return this.validator(graph)
     }
 
-    #createLogger(): void
+    #createLogger(): void 
     {
-        if (isBoolean(this.options.log))
+        if (isBoolean(this.options.log)) 
         {
             this.options.log = {
                 enabled: this.options.log
-            };
+            }
         }
-        else if (!isObject(this.options.log))
+        else if (!isObject(this.options.log)) 
         {
-            this.options.log = defaultLoggerOptions;
+            this.options.log = defaultLoggerOptions
         }
-        if (!isDefined(this.options.log.appId) && isString(this.name))
+        if (!isDefined(this.options.log.appId) && isString(this.name)) 
         {
-            this.options.log.appId = this.name;
+            this.options.log.appId = this.name
         }
-        this.logger = createLogger(this.options.log);
+        this.logger = createLogger(this.options.log)
     }
 
-    #persistServerName(): void
+    #persistServerName(): void 
     {
-        this.name = this.options.serverName;
+        this.name = this.options.serverName
 
-        if (!isString(this.options.serverName))
+        if (!isString(this.options.serverName)) 
         {
-            if (isFunction(this.gateway.httpServer?.address))
+            if (isFunction(this.gateway.httpServer?.address)) 
             {
-                const address   = this.gateway.httpServer?.address();
+                const address = this.gateway.httpServer?.address()
 
-                if (address?.address && address?.port)
+                if (address?.address && address?.port) 
                 {
-                    this.name = address.address + address.port;
+                    this.name = address.address + address.port
                 }
-                else if (this.options.port)
+                else if (this.options.port) 
                 {
-                    this.name = String(this.options.port);
+                    this.name = String(this.options.port)
                 }
             }
         }
-        if (!isString(this.options.serverName))
+        if (!isString(this.options.serverName)) 
         {
-            this.name = pseudoRandomText(8);
+            this.name = pseudoRandomText(8)
         }
     }
 }
-
