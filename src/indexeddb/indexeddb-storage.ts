@@ -1,134 +1,134 @@
-import { isNull } from '@topgunbuild/typed';
-import global from '../utils/window-or-global';
-import { TGStorage } from '../storage';
-import { arrayNodesToObject, filterNodes } from '../storage/utils';
-import { TGGraphData, TGNode, TGOptionsGet } from '../types';
+import { isNull } from '@topgunbuild/typed'
+import type { TGStorage } from '../storage'
+import { arrayNodesToObject, filterNodes } from '../storage/utils'
+import type { TGGraphData, TGNode, TGOptionsGet } from '../types'
+import global from '../utils/window-or-global'
 
-export class IndexedDBStorage implements TGStorage
+export class IndexedDBStorage implements TGStorage 
 {
-    private _dbp: Promise<IDBDatabase>|undefined;
-    readonly _dbName: string;
-    readonly _storeName: string;
+    private _dbp: Promise<IDBDatabase> | undefined
+    readonly _dbName: string
+    readonly _storeName: string
 
     /**
-     * Constructor
-     */
-    constructor(storeName: string)
+   * Constructor
+   */
+    constructor(storeName: string) 
     {
-        this._dbName    = storeName;
-        this._storeName = storeName;
-        this.#init();
+        this._dbName = storeName
+        this._storeName = storeName
+        this.#init()
     }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Public methods
     // -----------------------------------------------------------------------------------------------------
 
-    get(key: IDBValidKey): Promise<TGNode>
+    get(key: IDBValidKey): Promise<TGNode> 
     {
-        let req: IDBRequest;
-        return this.#withIDBStore('readwrite', (store) =>
+        let req: IDBRequest
+        return this.#withIDBStore('readwrite', (store) => 
         {
-            req = store.get(key);
-        }).then(() => req.result);
+            req = store.get(key)
+        }).then(() => req.result)
     }
 
-    async list(options: TGOptionsGet): Promise<TGGraphData>
+    async list(options: TGOptionsGet): Promise<TGGraphData> 
     {
-        const allNodes = await this.getAll();
-        const nodes    = filterNodes(allNodes, options);
+        const allNodes = await this.getAll()
+        const nodes = filterNodes(allNodes, options)
 
-        return arrayNodesToObject(nodes);
+        return arrayNodesToObject(nodes)
     }
 
-    put(key: IDBValidKey, value: any): Promise<void>
+    put(key: IDBValidKey, value: any): Promise<void> 
     {
-        return this.#withIDBStore('readwrite', (store) =>
+        return this.#withIDBStore('readwrite', (store) => 
         {
-            if (isNull(value))
+            if (isNull(value)) 
             {
-                store.delete(key);
+                store.delete(key)
             }
-            else
+            else 
             {
-                store.put(value, key);
+                store.put(value, key)
             }
-        });
+        })
     }
 
-    getAll(): Promise<TGNode[]>
+    getAll(): Promise<TGNode[]> 
     {
-        let req: IDBRequest;
-        return this.#withIDBStore('readwrite', (store) =>
+        let req: IDBRequest
+        return this.#withIDBStore('readwrite', (store) => 
         {
-            req = store.getAll();
-        }).then(() => req.result);
+            req = store.getAll()
+        }).then(() => req.result)
     }
 
-    update(key: IDBValidKey, updater: (val: any) => any): Promise<void>
+    update(key: IDBValidKey, updater: (val: any) => any): Promise<void> 
     {
-        return this.#withIDBStore('readwrite', (store) =>
+        return this.#withIDBStore('readwrite', (store) => 
         {
-            const req     = store.get(key);
-            req.onsuccess = () =>
+            const req = store.get(key)
+            req.onsuccess = () => 
             {
-                store.put(updater(req.result), key);
-            };
-        });
+                store.put(updater(req.result), key)
+            }
+        })
     }
 
     // -----------------------------------------------------------------------------------------------------
     // @ Private methods
     // -----------------------------------------------------------------------------------------------------
 
-    #init(): void
+    #init(): void 
     {
-        if (this._dbp)
+        if (this._dbp) 
         {
-            return;
+            return
         }
-        this._dbp = new Promise((resolve, reject) =>
+        this._dbp = new Promise((resolve, reject) => 
         {
             const indexedDB =
-                      global.indexedDB ||
-                      global['mozIndexedDB'] ||
-                      global['webkitIndexedDB'] ||
-                      global['msIndexedDB'] ||
-                      global['shimIndexedDB'];
+        global.indexedDB ||
+        global['mozIndexedDB'] ||
+        global['webkitIndexedDB'] ||
+        global['msIndexedDB'] ||
+        global['shimIndexedDB']
 
-            if (!indexedDB)
+            if (!indexedDB) 
             {
-                return reject(Error('IndexedDB could not be found!'));
+                return reject(Error('IndexedDB could not be found!'))
             }
 
-            const openreq     = indexedDB.open(this._dbName);
-            openreq.onerror   = () => reject(openreq.error);
-            openreq.onsuccess = () => resolve(openreq.result);
+            const openreq = indexedDB.open(this._dbName)
+            openreq.onerror = () => reject(openreq.error)
+            openreq.onsuccess = () => resolve(openreq.result)
 
             // First time setup: create an empty object store
-            openreq.onupgradeneeded = () =>
+            openreq.onupgradeneeded = () => 
             {
-                openreq.result.createObjectStore(this._storeName);
-            };
-        });
+                openreq.result.createObjectStore(this._storeName)
+            }
+        })
     }
 
     #withIDBStore(
         type: IDBTransactionMode,
-        callback: (store: IDBObjectStore) => void,
-    ): Promise<void>
+        callback: (store: IDBObjectStore) => void
+    ): Promise<void> 
     {
-        this.#init();
+        this.#init()
         return (this._dbp as Promise<IDBDatabase>).then(
             db =>
-                new Promise<void>((resolve, reject) =>
+                new Promise<void>((resolve, reject) => 
                 {
-                    const transaction      = db.transaction(this._storeName, type);
-                    transaction.oncomplete = () => resolve();
-                    transaction.onabort    = transaction.onerror = () =>
-                        reject(transaction.error);
-                    callback(transaction.objectStore(this._storeName));
-                }),
-        );
+                    const transaction = db.transaction(this._storeName, type)
+                    transaction.oncomplete = () => resolve()
+                    transaction.onabort = transaction.onerror = () =>
+                        reject(transaction.error)
+                    callback(transaction.objectStore(this._storeName))
+                })
+        )
     }
 }

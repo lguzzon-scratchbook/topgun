@@ -1,10 +1,13 @@
-import { TGGraphAdapter, TGGraphAdapterOptions } from '../types';
-import { IndexedDBStorage } from './indexeddb-storage';
-import { createGraphAdapter } from '../storage/adapter';
+import { createGraphAdapter } from '../storage/adapter'
+import type { TGGraphAdapter, TGGraphAdapterOptions } from '../types'
+import { IndexedDBStorage } from './indexeddb-storage'
 
-const DEFAULT_DB_NAME = 'topgun-nodes';
+const DEFAULT_DB_NAME = 'topgun-nodes'
 
-export function createIndexedDBAdapter(name = DEFAULT_DB_NAME, adapterOptions?: TGGraphAdapterOptions): TGGraphAdapter
+export function createIndexedDBAdapter(
+    name = DEFAULT_DB_NAME,
+    adapterOptions?: TGGraphAdapterOptions
+): TGGraphAdapter 
 {
-    return createGraphAdapter(new IndexedDBStorage(name), adapterOptions);
+    return createGraphAdapter(new IndexedDBStorage(name), adapterOptions)
 }

@@ -1,4 +1,3 @@
-export * from './indexeddb-adapter';
-export * from './indexeddb-connector';
-export * from './indexeddb-storage';
-
+export * from './indexeddb-adapter'
+export * from './indexeddb-connector'
+export * from './indexeddb-storage'
