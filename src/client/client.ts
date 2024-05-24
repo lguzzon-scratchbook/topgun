@@ -54,10 +54,12 @@ export class TGClient extends AsyncStreamEmitter<any>
         this.graph = new TGGraph(this)
         this.WAIT_FOR_USER_PUB = '__WAIT_FOR_USER_PUB__'
 
+        // Combine user options with default options
+        this.opt({ ...defaultOptions, ...options })
+
         this.graph.use(diffCRDT)
         this.graph.use(diffCRDT, 'write')
 
-        this.opt(Object.assign(defaultOptions, options || {}))
         this.#registerSeaMiddleware()
         this.user().recoverCredentials()
     }
@@ -67,7 +69,7 @@ export class TGClient extends AsyncStreamEmitter<any>
     // -----------------------------------------------------------------------------------------------------
 
     /**
-   * Get User API
+   * Get User API or link by public key/node
    */
     user(): TGUserApi
     user(pubOrNode: string | TGNode): TGLink
@@ -87,19 +89,21 @@ export class TGClient extends AsyncStreamEmitter<any>
             }
             else 
             {
-                throw Error('Argument must be public key or node!')
+                throw new Error('Argument must be public key or node!')
             }
-
             return this.get('~' + this.pub)
         }
 
-        return (this._user =
-      this._user ||
-      new TGUserApi(
-          this,
-          getSessionStorage(this.options?.sessionStorage),
-          getSessionStorageKey(this.options?.sessionStorageKey)
-      ))
+        // Lazy-load the user API if it's not already created
+        if (!this._user) 
+        {
+            this._user = new TGUserApi(
+                this,
+                getSessionStorage(this.options.sessionStorage),
+                getSessionStorageKey(this.options.sessionStorageKey)
+            )
+        }
+        return this._user
     }
 
     /**
@@ -142,10 +146,7 @@ export class TGClient extends AsyncStreamEmitter<any>
    */
     async disconnect(): Promise<void> 
     {
-        await this.graph.eachConnector(async (connector) => 
-        {
-            await connector.disconnect()
-        })
+        await this.graph.eachConnector(connector => connector.disconnect())
         this.closeAllListeners()
     }
 
@@ -167,8 +168,10 @@ export class TGClient extends AsyncStreamEmitter<any>
 
     /**
    * System events callback
+   * @param event
+   * @param cb
    */
-    on(event: string, cb: (value) => void): void 
+    on(event: string, cb: (value: any) => void): void 
     {
         ;(async () => 
         {
@@ -213,12 +216,11 @@ export class TGClient extends AsyncStreamEmitter<any>
    */
     async #handlePeers(peers: TGPeerOptions[]): Promise<void> 
     {
-        peers.forEach((peer: TGPeerOptions) => 
+        peers.forEach((peer) => 
         {
             try 
             {
                 const socketOpts = socketOptionsFromPeer(peer)
-
                 if (socketOpts) 
                 {
                     this.#useConnector(createConnector(socketOpts))

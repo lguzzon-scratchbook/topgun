@@ -201,7 +201,7 @@ export class TGWebSocketGraphConnector extends TGGraphWireConnector
     ): Promise<{ channel: string; data: any }> 
     {
         const id = this.client.id
-        const timestamp = new Date().getTime()
+        const timestamp = Date.now()
         const challenge = `${id}/${timestamp}`
         const proof = await sign(challenge, { pub, priv }, { raw: true })
 

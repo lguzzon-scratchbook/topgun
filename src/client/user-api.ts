@@ -43,7 +43,7 @@ export class TGUserApi
     {
         this.#client = client
         sessionStorage = _sessionStorage
-        sessionStorageKey = _sessionStorageKey
+        sessionStorageKey = _sessionStorageKey ?? ''
     }
 
     // -----------------------------------------------------------------------------------------------------
@@ -63,18 +63,13 @@ export class TGUserApi
         {
             const credentials = await createUser(this.#client, alias, password)
             await this.useCredentials(credentials)
-            if (isFunction(cb)) 
-            {
-                cb(credentials)
-            }
+            cb?.(credentials)
             return credentials
         }
         catch (err) 
         {
-            if (cb) 
-            {
-                cb({ err: err as Error })
-            }
+            const error = { err: err as Error }
+            cb?.(error)
             throw err
         }
     }
@@ -82,17 +77,6 @@ export class TGUserApi
     /**
    * Authenticates a user, previously created via User.create.
    */
-    async auth(
-        pair: Pair,
-        cb: TGAuthCallback,
-        _opt?: AuthOptions
-    ): Promise<TGUserCredentials | undefined>
-    async auth(
-        alias: string,
-        password: string,
-        cb?: TGAuthCallback,
-        _opt?: AuthOptions
-    ): Promise<TGUserCredentials | undefined>
     async auth(
         aliasOrPair: string | Pair,
         passwordOrCallback: string | TGAuthCallback,
@@ -110,47 +94,35 @@ export class TGUserApi
         {
             await this.recoverCredentials()
 
-            let credentials: TGUserCredentials
-
             if (isObject(aliasOrPair) && (aliasOrPair.pub || aliasOrPair.epub)) 
             {
-                const pair = aliasOrPair
-                const options = optionsOrCallback as AuthOptions
-
-                credentials = await authenticate(this.#client, pair as Pair, options)
-
+                const credentials = await authenticate(
+                    this.#client,
+                    aliasOrPair as Pair,
+                    optionsOrCallback as AuthOptions
+                )
                 await this.useCredentials(credentials)
-
-                if (isFunction(cb)) 
-                {
-                    cb(credentials)
-                }
-
+                cb?.(credentials)
                 return credentials
             }
-            else if (isString(aliasOrPair) && isString(passwordOrCallback)) 
+
+            if (isString(aliasOrPair) && isString(passwordOrCallback)) 
             {
-                const alias = aliasOrPair
-                const password = passwordOrCallback
-                const options = maybeOptions
-
-                credentials = await authenticate(this.#client, alias, password, options)
+                const credentials = await authenticate(
+                    this.#client,
+                    aliasOrPair,
+                    passwordOrCallback,
+                    maybeOptions
+                )
                 await this.useCredentials(credentials)
-
-                if (isFunction(cb)) 
-                {
-                    cb(credentials)
-                }
-
+                cb?.(credentials)
                 return credentials
             }
         }
         catch (err) 
         {
-            if (cb) 
-            {
-                cb({ err: err as Error })
-            }
+            const error = { err: err as Error }
+            cb?.(error)
             throw err
         }
     }
@@ -164,15 +136,11 @@ export class TGUserApi
         {
             if (this.is?.alias) 
             {
-                this.#client.emit('leave', {
-                    alias: this.is.alias,
-                    pub  : this.is.pub
-                })
+                this.#client.emit('leave', { alias: this.is.alias, pub: this.is.pub })
             }
             this.#removeCredentials()
             this.is = undefined
         }
-
         return this
     }
 
@@ -181,11 +149,10 @@ export class TGUserApi
    */
     get(soul: string): TGLink 
     {
-        soul = assertNotEmptyString(soul)
-
-        return !!this.is
-            ? this.#client.get(`~${this.is.pub}`).get(soul)
-            : this.#client.get(`~${this.#client.WAIT_FOR_USER_PUB}`).get(soul)
+        const safeSoul = assertNotEmptyString(soul)
+        return this.is
+            ? this.#client.get(`~${this.is.pub}`).get(safeSoul)
+            : this.#client.get(`~${this.#client.WAIT_FOR_USER_PUB}`).get(safeSoul)
     }
 
     /**
@@ -196,17 +163,13 @@ export class TGUserApi
         if (sessionStorage) 
         {
             const maybeSession = await getItemAsync(sessionStorage, sessionStorageKey)
-
-            if (maybeSession !== null) 
+            if (maybeSession !== null && isValidCredentials(maybeSession)) 
             {
-                if (isValidCredentials(maybeSession)) 
-                {
-                    await this.useCredentials(maybeSession)
-                }
-                else 
-                {
-                    await this.#removeCredentials()
-                }
+                await this.useCredentials(maybeSession)
+            }
+            else 
+            {
+                await this.#removeCredentials()
             }
         }
     }
@@ -214,27 +177,22 @@ export class TGUserApi
     /**
    * Authenticates a user by credentials
    */
-    async useCredentials(credentials: TGUserCredentials): Promise<{
-        readonly alias: string
-        readonly pub: string
-    }> 
+    async useCredentials(
+        credentials: TGUserCredentials
+    ): Promise<{ readonly alias: string; readonly pub: string }> 
     {
-        credentials = assertCredentials(credentials)
-
+        const validCredentials = assertCredentials(credentials)
         this.leave()
         this.#signMiddleware = graphSigner(this.#client, {
-            priv: credentials.priv,
-            pub : credentials.pub
+            priv: validCredentials.priv,
+            pub : validCredentials.pub
         })
         this.#client.graph.use(this.#signMiddleware, 'write')
-        this.is = {
-            alias: credentials.alias,
-            pub  : credentials.pub
-        }
+        this.is = { alias: validCredentials.alias, pub: validCredentials.pub }
 
-        if (this.is && this.is.pub) 
+        if (this.is?.pub) 
         {
-            await this.#authSuccess(credentials)
+            await this.#authSuccess(validCredentials)
         }
 
         return this.is
@@ -246,16 +204,17 @@ export class TGUserApi
 
     async #authSuccess(credentials: TGUserCredentials): Promise<void> 
     {
-        this.#authConnectors(credentials)
-        await this.#persistCredentials(credentials)
-
+        await Promise.all([
+            this.#authConnectors(credentials),
+            this.#persistCredentials(credentials)
+        ])
         this.#client.emit('auth', {
             alias: credentials.alias,
             pub  : credentials.pub
         })
     }
 
-    async #authConnectors(credentials: TGUserCredentials): Promise<any> 
+    async #authConnectors(credentials: TGUserCredentials): Promise<void> 
     {
         await this.#client.graph.eachConnector(async (connector) => 
         {

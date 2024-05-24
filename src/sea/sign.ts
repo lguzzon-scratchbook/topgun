@@ -39,7 +39,7 @@ export async function verifyCertificate(
     {
     // check if "pub" (of the graph owner) really issued this cert
         const data = await verify(cert, soulPub)
-        const putDate = new Date().getTime()
+        const putDate = Date.now()
         const certDate = (data && data.e) || 0
 
         if (putDate > certDate) 

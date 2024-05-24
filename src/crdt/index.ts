@@ -12,30 +12,22 @@ const EMPTY: any = {}
 export function addMissingState(graphData: Partial<TGGraphData>): TGGraphData 
 {
     const updatedGraphData = cloneValue(graphData)
-    const now = new Date().getTime()
+    const now = Date.now()
 
     for (const soul in graphData) 
     {
-        if (!soul) 
-        {
-            continue
-        }
+        if (!soul) continue
 
         const node = graphData[soul]
-        if (!node) 
-        {
-            continue
-        }
+        if (!node) continue
+
         const meta = (node._ = node._ || { '#': null, '>': {} })
         meta['#'] = soul
         const state = (meta['>'] = meta['>'] || {})
 
         for (const key in node) 
         {
-            if (key === '_') 
-            {
-                continue
-            }
+            if (key === '_') continue
             state[key] = state[key] || now
         }
 
@@ -57,7 +49,7 @@ export function diffCRDT(
 ): TGGraphData | undefined 
 {
     const {
-        machineState = new Date().getTime(),
+        machineState = Date.now(),
         futureGrace = DEFAULT_OPTS.futureGrace,
         Lexical = DEFAULT_OPTS.Lexical
     } = opts || EMPTY
@@ -67,16 +59,12 @@ export function diffCRDT(
 
     for (const soul in updatedGraph) 
     {
-        if (!soul) 
-        {
-            continue
-        }
+        if (!soul) continue
+
         const existing = existingGraph[soul]
         const updated = updatedGraph[soul]
-        const existingState: TGNodeState =
-      (existing && existing._ && existing._['>']) || EMPTY
-        const updatedState: TGNodeState =
-      (updated && updated._ && updated._['>']) || EMPTY
+        const existingState: TGNodeState = existing?._?.['>'] || EMPTY
+        const updatedState: TGNodeState = updated?._?.['>'] || EMPTY
 
         if (!updated) 
         {
@@ -95,46 +83,27 @@ export function diffCRDT(
 
         for (const key in updatedState) 
         {
-            if (!key) 
-            {
-                continue
-            }
+            if (!key) continue
 
             const existingKeyState = existingState[key]
             const updatedKeyState = updatedState[key]
 
-            if (updatedKeyState > maxState || !updatedKeyState) 
-            {
-                continue
-            }
-            if (existingKeyState && existingKeyState >= updatedKeyState) 
-            {
-                continue
-            }
+            if (updatedKeyState > maxState || !updatedKeyState) continue
+            if (existingKeyState && existingKeyState >= updatedKeyState) continue
+
             if (existingKeyState === updatedKeyState) 
             {
-                const existingVal = (existing && existing[key]) || undefined
+                const existingVal = existing?.[key]
                 const updatedVal = updated[key]
-                // This is based on TopGun logic
-                if (Lexical(updatedVal) <= Lexical(existingVal)) 
-                {
-                    continue
-                }
+                if (Lexical(updatedVal) <= Lexical(existingVal)) continue
             }
+
             updates[key] = updated[key]
-
-            if (updates._ && updates._['>']) 
-            {
-                updates._['>'][key] = updatedKeyState
-            }
-
+            updates._['>'][key] = updatedKeyState
             hasUpdates = true
         }
 
-        if (hasUpdates) 
-        {
-            allUpdates[soul] = updates
-        }
+        if (hasUpdates) allUpdates[soul] = updates
     }
 
     return Object.keys(allUpdates).length > 0 ? allUpdates : undefined
@@ -146,18 +115,10 @@ export function mergeNodes(
     mut: 'immutable' | 'mutable' = 'immutable'
 ): TGNode | undefined 
 {
-    if (!existing) 
-    {
-        return updates
-    }
-    if (updates === null) 
-    {
-        return null
-    }
-    else if (!updates) 
-    {
-        return existing
-    }
+    if (!existing) return updates
+    if (updates === null) return null
+    if (!updates) return existing
+
     const existingMeta = existing._ || {}
     const existingState = existingMeta['>'] || {}
     const updatedMeta = updates._ || {}
@@ -167,10 +128,7 @@ export function mergeNodes(
     {
         for (const key in updatedState) 
         {
-            if (!key) 
-            {
-                continue
-            }
+            if (!key) continue
             existing[key] = updates[key]
             existingState[key] = updatedState[key]
         }
@@ -188,7 +146,7 @@ export function mergeNodes(
             '#': existingMeta['#'],
             '>': {
                 ...existingMeta['>'],
-                ...((updates._ && updates._['>']) || {})
+                ...(updates._?.['>'] || {})
             }
         }
     }
@@ -204,11 +162,9 @@ export function mergeGraph(
 
     for (const soul in diff) 
     {
-        if (!soul) 
-        {
-            continue
-        }
+        if (!soul) continue
         result[soul] = mergeNodes(existing[soul], diff[soul], mut)
     }
+
     return result
 }

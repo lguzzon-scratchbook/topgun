@@ -65,7 +65,7 @@ export async function createUser(
         pub
     }
 
-    const now = new Date().getTime()
+    const now = Date.now()
     const graph = await signGraph(
         client,
         {

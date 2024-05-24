@@ -44,17 +44,17 @@ export class TGPeer extends TGWebSocketGraphConnector
         return this.client.authState === this.client.AUTHENTICATED
     }
 
-    waitForAuth(): Promise<void> 
+    async waitForAuth(): Promise<void> 
     {
         if (this.isAuthenticated()) 
         {
-            return Promise.resolve()
+            return
         }
 
-        return this.client.listener('authenticate').once()
+        await this.client.listener('authenticate').once()
     }
 
-    putInPeer(
+    async putInPeer(
         graph: TGGraphData,
         originators: TGOriginators
     ): Promise<TGMessage> 
@@ -64,18 +64,18 @@ export class TGPeer extends TGWebSocketGraphConnector
             this.put({
                 graph,
                 originators,
-                cb: (res: TGMessage) => resolve(res)
+                cb: resolve
             })
         })
     }
 
-    getFromPeer(options: TGOptionsGet): Promise<TGMessage> 
+    async getFromPeer(options: TGOptionsGet): Promise<TGMessage> 
     {
         return new Promise<TGMessage>((resolve) => 
         {
             this.get({
                 options,
-                cb: (res: TGMessage) => resolve(res)
+                cb: resolve
             })
         })
     }
@@ -96,7 +96,7 @@ export class TGPeer extends TGWebSocketGraphConnector
 
     async #connectListener(secret: string): Promise<void> 
     {
-        for await (const event of this.client.listener('connect')) 
+        for await (const _ of this.client.listener('connect')) 
         {
             this.logger.debug('Peer is connected')
             try 
@@ -114,30 +114,22 @@ export class TGPeer extends TGWebSocketGraphConnector
         }
     }
 
-    /*async #authenticate(secret: string): Promise<void>
-    {
-        await this.waitForConnection();
-        await this.#doAuth(secret);
-
-        (async () =>
-        {
-            for await (const _event of this.client.listener('connect'))
-            {
-                this.#doAuth(secret);
-            }
-        })();
-    }*/
-
     async #doAuth(secret: string): Promise<{ channel: string; data: any }> 
     {
         const id = this.client.id
-        const timestamp = new Date().getTime()
+        const timestamp = Date.now()
         const challenge = `${id}/${timestamp}`
 
-        const hash = await work(challenge, secret)
-        const data = await encrypt(JSON.stringify({ peerUri: this.uri }), hash, {
-            raw: true
-        })
+        const [hash, data] = await Promise.all([
+            work(challenge, secret),
+            encrypt(
+                JSON.stringify({ peerUri: this.uri }),
+                await work(challenge, secret),
+                {
+                    raw: true
+                }
+            )
+        ])
 
         return this.client.invoke('peerLogin', { challenge, data })
     }
