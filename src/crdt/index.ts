@@ -21,14 +21,16 @@ export function addMissingState(graphData: Partial<TGGraphData>): TGGraphData
         const node = graphData[soul]
         if (!node) continue
 
-        const meta = (node._ = node._ || { '#': null, '>': {} })
-        meta['#'] = soul
-        const state = (meta['>'] = meta['>'] || {})
+        const meta = (node._ = node._ || { '#': soul, '>': {} })
+        const state = meta['>']
 
         for (const key in node) 
         {
             if (key === '_') continue
-            state[key] = state[key] || now
+            if (!(key in state)) 
+            {
+                state[key] = now
+            }
         }
 
         updatedGraphData[soul] = node
@@ -52,7 +54,7 @@ export function diffCRDT(
         machineState = Date.now(),
         futureGrace = DEFAULT_OPTS.futureGrace,
         Lexical = DEFAULT_OPTS.Lexical
-    } = opts || EMPTY
+    } = opts
     const maxState = machineState + futureGrace
 
     const allUpdates: TGGraphData = {}
@@ -73,13 +75,7 @@ export function diffCRDT(
         }
 
         let hasUpdates = false
-
-        const updates: TGNode = {
-            _: {
-                '#': soul,
-                '>': {}
-            }
-        }
+        const updates: TGNode = { _: { '#': soul, '>': {} } }
 
         for (const key in updatedState) 
         {
@@ -126,16 +122,10 @@ export function mergeNodes(
 
     if (mut === 'mutable') 
     {
-        for (const key in updatedState) 
-        {
-            if (!key) continue
-            existing[key] = updates[key]
-            existingState[key] = updatedState[key]
-        }
-
+        Object.assign(existing, updates)
+        Object.assign(existingState, updatedState)
         existingMeta['>'] = existingState
         existing._ = existingMeta as TGNodeMeta
-
         return existing
     }
 
@@ -146,7 +136,7 @@ export function mergeNodes(
             '#': existingMeta['#'],
             '>': {
                 ...existingMeta['>'],
-                ...(updates._?.['>'] || {})
+                ...updatedState
             }
         }
     }
@@ -158,7 +148,7 @@ export function mergeGraph(
     mut: 'immutable' | 'mutable' = 'immutable'
 ): TGGraphData 
 {
-    const result: TGGraphData = mut ? existing : { ...existing }
+    const result: TGGraphData = mut === 'mutable' ? existing : { ...existing }
 
     for (const soul in diff) 
     {
