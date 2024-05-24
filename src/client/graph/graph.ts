@@ -57,7 +57,6 @@ export class TGGraph extends AsyncStreamEmitter<any>
     {
         super()
         this.id = uuidv4()
-        this.receiveGraphData = this.receiveGraphData.bind(this)
         this.activeConnectors = 0
         this._opt = {}
         this._graph = {}
@@ -66,6 +65,8 @@ export class TGGraph extends AsyncStreamEmitter<any>
         this._readMiddleware = []
         this._writeMiddleware = []
         this.rootEventEmitter = rootEventEmitter
+
+        this.receiveGraphData = this.receiveGraphData.bind(this)
     }
 
     // -----------------------------------------------------------------------------------------------------
@@ -102,54 +103,28 @@ export class TGGraph extends AsyncStreamEmitter<any>
    */
     connect(connector: TGGraphConnector): TGGraph 
     {
-        if (this.connectors.indexOf(connector) !== -1) 
+        if (!this.connectors.includes(connector)) 
         {
-            return this
-        }
-        this.connectors.push(connector.connectToGraph(this))
-        ;(async () => 
-        {
-            for await (const value of connector.listener('connect')) 
+            this.connectors.push(connector.connectToGraph(this))
+            this.#setupConnectorListeners(connector)
+            if (connector.isConnected) 
             {
-                this.#onConnectorStatus(true)
-                this.rootEventEmitter.emit('connectorConnected', connector)
+                this.activeConnectors++
             }
-        })()
-        ;(async () => 
-        {
-            for await (const value of connector.listener('disconnect')) 
-            {
-                this.#onConnectorStatus(false)
-                this.rootEventEmitter.emit('connectorDisconnected', connector)
-            }
-        })()
-        ;(async () => 
-        {
-            for await (const { data, id, replyToId } of connector.listener(
-                'graphData'
-            )) 
-            {
-                this.receiveGraphData(data, id, replyToId)
-            }
-        })()
-
-        if (connector.isConnected) 
-        {
-            this.activeConnectors++
         }
         return this
     }
 
     clear(): void 
     {
-        Object.keys(this._graph).forEach((key) => 
+        for (const key in this._graph) 
         {
             delete this._graph[key]
-        })
-        Object.keys(this._queries).forEach((key) => 
+        }
+        for (const key in this._queries) 
         {
             this._queries[key].destroy()
-        })
+        }
     }
 
     /**
@@ -160,14 +135,14 @@ export class TGGraph extends AsyncStreamEmitter<any>
     disconnect(connector: TGGraphConnector): TGGraph 
     {
         const idx = this.connectors.indexOf(connector)
-        connector.closeAllListeners()
         if (idx !== -1) 
         {
             this.connectors.splice(idx, 1)
-        }
-        if (connector.isConnected) 
-        {
-            this.activeConnectors--
+            connector.closeAllListeners()
+            if (connector.isConnected) 
+            {
+                this.activeConnectors--
+            }
         }
         return this
     }
@@ -178,16 +153,11 @@ export class TGGraph extends AsyncStreamEmitter<any>
    * @param middleware The middleware function to add
    * @param kind optionally register write middleware instead of read by passing "write"
    */
-    use(middleware: TGMiddleware, kind = 'read' as TGMiddlewareType): TGGraph 
+    use(middleware: TGMiddleware, kind: TGMiddlewareType = 'read'): TGGraph 
     {
-        if (kind === 'read') 
-        {
-            this._readMiddleware.push(middleware)
-        }
-        else if (kind === 'write') 
-        {
-            this._writeMiddleware.push(middleware)
-        }
+        const targetMiddleware =
+      kind === 'read' ? this._readMiddleware : this._writeMiddleware
+        targetMiddleware.push(middleware)
         return this
     }
 
@@ -197,25 +167,15 @@ export class TGGraph extends AsyncStreamEmitter<any>
    * @param middleware The middleware function to remove
    * @param kind optionally unregister write middleware instead of read by passing "write"
    */
-    unuse(middleware: TGMiddleware, kind = 'read' as TGMiddlewareType): TGGraph 
+    unuse(middleware: TGMiddleware, kind: TGMiddlewareType = 'read'): TGGraph 
     {
-        if (kind === 'read') 
+        const targetMiddleware =
+      kind === 'read' ? this._readMiddleware : this._writeMiddleware
+        const idx = targetMiddleware.indexOf(middleware)
+        if (idx !== -1) 
         {
-            const idx = this._readMiddleware.indexOf(middleware)
-            if (idx !== -1) 
-            {
-                this._readMiddleware.splice(idx, 1)
-            }
+            targetMiddleware.splice(idx, 1)
         }
-        else if (kind === 'write') 
-        {
-            const idx = this._writeMiddleware.indexOf(middleware)
-            if (idx !== -1) 
-            {
-                this._writeMiddleware.splice(idx, 1)
-            }
-        }
-
         return this
     }
 
@@ -233,13 +193,12 @@ export class TGGraph extends AsyncStreamEmitter<any>
         const stream = this.#createQueryStream(queryString, cb, msgId, askOnce)
         const query = this.#getQuery(queryString)
 
-        getNodesFromGraph(opts, this._graph).forEach((node) => 
+        for (const node of getNodesFromGraph(opts, this._graph)) 
         {
             if (isRefNode(node)) 
             {
                 query.setRef(node)
                 const refSoul = node['#']
-
                 if (this._graph.hasOwnProperty(refSoul)) 
                 {
                     cb(this._graph[refSoul] as T)
@@ -249,12 +208,9 @@ export class TGGraph extends AsyncStreamEmitter<any>
             {
                 cb(node as T, getNodeSoul(node))
             }
-        })
-
-        return () => 
-        {
-            this.unlisten(queryString, stream)
         }
+
+        return () => this.unlisten(queryString, stream)
     }
 
     /**
@@ -317,9 +273,7 @@ export class TGGraph extends AsyncStreamEmitter<any>
     get(data: TGGet): () => void 
     {
         const msgId = data.msgId || uuidv4()
-
         this.emit('get', { ...data, msgId })
-
         return () => this.emit('off', msgId)
     }
 
@@ -349,7 +303,6 @@ export class TGGraph extends AsyncStreamEmitter<any>
         }
 
         const { graphData, soul } = flattenGraphData(data, [...fullPath])
-
         this.put(graphData, cb, soul, putOpt)
     }
 
@@ -365,7 +318,6 @@ export class TGGraph extends AsyncStreamEmitter<any>
     ): () => void 
     {
         let diff: TGGraphData = addMissingState(data)
-
         const id = msgId || uuidv4()
     ;(async () => 
         {
@@ -375,7 +327,6 @@ export class TGGraph extends AsyncStreamEmitter<any>
                 {
                     return
                 }
-
                 diff = await fn(diff, this._graph, putOpt)
             }
 
@@ -385,12 +336,7 @@ export class TGGraph extends AsyncStreamEmitter<any>
             }
 
             await this.receiveGraphData(diff)
-
-            this.emit('put', {
-                cb,
-                graph: diff,
-                msgId: id
-            })
+            this.emit('put', { cb, graph: diff, msgId: id })
 
             if (cb) 
             {
@@ -413,11 +359,10 @@ export class TGGraph extends AsyncStreamEmitter<any>
         cb: (connector: TGGraphConnector) => void
     ): Promise<TGGraph> 
     {
-        for (let index = 0; index < this.connectors.length; index++) 
+        for (const connector of this.connectors) 
         {
-            await cb(this.connectors[index])
+            await cb(connector)
         }
-
         return this
     }
 
@@ -513,7 +458,6 @@ export class TGGraph extends AsyncStreamEmitter<any>
         }
 
         targetMap.clear()
-
         this.emit('graphData', { diff, id, replyToId })
     }
 
@@ -576,11 +520,10 @@ export class TGGraph extends AsyncStreamEmitter<any>
    */
     async #eachQuery(cb: (query: TGGraphQuery) => void): Promise<TGGraph> 
     {
-        for (const queryString in this._queries) 
+        for (const query of Object.values(this._queries)) 
         {
-            await cb(this._queries[queryString])
+            await cb(query)
         }
-
         return this
     }
 
@@ -589,13 +532,38 @@ export class TGGraph extends AsyncStreamEmitter<any>
    */
     #onConnectorStatus(connected?: boolean): void 
     {
-        if (connected) 
+        this.activeConnectors += connected ? 1 : -1
+    }
+
+    /**
+   * Setting up listeners for the connector
+   */
+    #setupConnectorListeners(connector: TGGraphConnector): void 
+    {
+        ;(async () => 
         {
-            this.activeConnectors++
-        }
-        else 
+            for await (const _ of connector.listener('connect')) 
+            {
+                this.#onConnectorStatus(true)
+                this.rootEventEmitter.emit('connectorConnected', connector)
+            }
+        })()
+        ;(async () => 
         {
-            this.activeConnectors--
-        }
+            for await (const _ of connector.listener('disconnect')) 
+            {
+                this.#onConnectorStatus(false)
+                this.rootEventEmitter.emit('connectorDisconnected', connector)
+            }
+        })()
+        ;(async () => 
+        {
+            for await (const { data, id, replyToId } of connector.listener(
+                'graphData'
+            )) 
+            {
+                this.receiveGraphData(data, id, replyToId)
+            }
+        })()
     }
 }
