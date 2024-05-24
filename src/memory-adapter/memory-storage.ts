@@ -8,37 +8,45 @@ export class MemoryStorage implements TGStorage
     constructor(protected map = new Map<string, TGNode>()) 
     {}
 
-    list(options: TGOptionsGet): Promise<TGGraphData> 
+    async list(options: TGOptionsGet): Promise<TGGraphData> 
     {
         const direction = options && options['-'] ? -1 : 1
-        let keys = Array.from(this.map.keys())
-            .filter(key => filterMatch(key, options))
-            .sort((a, b) => direction * lexicographicCompare(a, b))
+        let keys = []
 
+        // Filter and sort keys in a single pass
+        for (const key of this.map.keys()) 
+        {
+            if (filterMatch(key, options)) 
+            {
+                keys.push(key)
+            }
+        }
+
+        keys.sort((a, b) => direction * lexicographicCompare(a, b))
+
+        // Limit the number of keys if a limit is specified
         if (isNumber(options && options['%']) && keys.length > options['%']) 
         {
             keys = keys.slice(0, options['%'])
         }
 
-        const result = keys.reduce(
-            (accum: TGGraphData, key: string) => ({
-                ...accum,
-                [key]: this.map.get(key)
-            }),
-            {}
-        )
+        const result: TGGraphData = {}
+        for (const key of keys) 
+        {
+            result[key] = this.map.get(key)
+        }
 
-        return Promise.resolve(result)
+        return result
     }
 
-    put(key: string, value: TGNode): Promise<void> 
+    async put(key: string, value: TGNode): Promise<void> 
     {
-        return Promise.resolve(this.putSync(key, value))
+        this.map.set(key, value)
     }
 
-    get(key: string): Promise<TGNode> 
+    async get(key: string): Promise<TGNode | null> 
     {
-        return Promise.resolve(this.getSync(key))
+        return this.map.get(key) || null
     }
 
     putSync(key: string, value: TGNode): void 

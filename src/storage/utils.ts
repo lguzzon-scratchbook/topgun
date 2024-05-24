@@ -19,13 +19,11 @@ import { MAX_KEY_SIZE, MAX_VALUE_SIZE } from './constants'
 
 export function arrayNodesToObject(nodes: TGNode[]): TGGraphData 
 {
-    return nodes.reduce(
-        (accum: TGGraphData, node: TGNode) => ({
-            ...accum,
-            [getNodeSoul(node)]: node
-        }),
-        {}
-    )
+    return nodes.reduce((accum: TGGraphData, node: TGNode) => 
+    {
+        accum[getNodeSoul(node)] = node
+        return accum
+    }, {})
 }
 
 export function filterNodes(nodes: TGNode[], options: TGOptionsGet): TGNode[] 
@@ -36,7 +34,7 @@ export function filterNodes(nodes: TGNode[], options: TGOptionsGet): TGNode[]
     }
 
     const direction = options['-'] ? -1 : 1
-    let filteredNodes = nodes
+    const filteredNodes = nodes
         .filter(node => filterMatch(getNodeSoul(node), options))
         .sort(
             (a, b) => direction * lexicographicCompare(getNodeSoul(a), getNodeSoul(b))
@@ -44,7 +42,7 @@ export function filterNodes(nodes: TGNode[], options: TGOptionsGet): TGNode[]
 
     if (isNumber(options['%']) && filteredNodes.length > options['%']) 
     {
-        filteredNodes = filteredNodes.slice(0, options['%'])
+        return filteredNodes.slice(0, options['%'])
     }
 
     return filteredNodes
@@ -61,7 +59,6 @@ export function getListOptions(options: TGOptionsGet): TGOptionsGet | null
     const getPath = (path: string) =>
         isString(options['#']) ? [options['#'], path].join('/') : path
 
-    // List options
     if (isBoolean(options['-'])) 
     {
         listOptions['-'] = options['-']
@@ -71,9 +68,6 @@ export function getListOptions(options: TGOptionsGet): TGOptionsGet | null
         listOptions['%'] = options['%']
     }
 
-    // Lex options
-
-    // Prefix for query list
     if (isString(options['*'])) 
     {
         listOptions['*'] = getPath(options['*'])
@@ -116,7 +110,6 @@ export function filterMatch(
     }
 
     const listOptions = getListOptions(options)
-
     if (!listOptions) 
     {
         return false
@@ -149,13 +142,12 @@ export function assertPutEntry(
 
 export function assertKeySize(key: string, maxKeySize: number): void 
 {
-    if (TextEncoder.encode(key).length <= maxKeySize) 
+    if (TextEncoder.encode(key).length > maxKeySize) 
     {
-        return
+        throw new RangeError(
+            `Key "${key}" is larger than the limit of ${maxKeySize} bytes.`
+        )
     }
-    throw new RangeError(
-        `Key "${key}" is larger than the limit of ${maxKeySize} bytes.`
-    )
 }
 
 export function assertValueSize(
@@ -164,22 +156,21 @@ export function assertValueSize(
     key?: string
 ): void 
 {
-    if (roughSizeOfObject(value) <= maxValueSize) 
+    if (roughSizeOfObject(value) > maxValueSize) 
     {
-        return
+        if (key !== undefined) 
+        {
+            throw new RangeError(
+                `Value for key "${key}" is above the limit of ${maxValueSize} bytes.`
+            )
+        }
+        throw new RangeError(`Values cannot be larger than ${maxValueSize} bytes.`)
     }
-    if (key !== undefined) 
-    {
-        throw new RangeError(
-            `Value for key "${key}" is above the limit of ${maxValueSize} bytes.`
-        )
-    }
-    throw new RangeError(`Values cannot be larger than ${maxValueSize} bytes.`)
 }
 
 function roughSizeOfObject(object: object): number 
 {
-    const objectList = []
+    const objectList = new Set()
     const stack = [object]
     let bytes = 0
 
@@ -193,26 +184,29 @@ function roughSizeOfObject(object: object): number
         }
         else if (typeof value === 'string') 
         {
-            bytes += (value as string).length * 2
+            bytes += value.length * 2
         }
         else if (typeof value === 'number') 
         {
             bytes += 8
         }
-        else if (typeof value === 'object' && objectList.indexOf(value) === -1) 
+        else if (typeof value === 'object' && !objectList.has(value)) 
         {
-            objectList.push(value)
+            objectList.add(value)
 
-            for (const i in value) 
+            for (const key in value) 
             {
-                stack.push(value[i])
+                if (Object.prototype.hasOwnProperty.call(value, key)) 
+                {
+                    stack.push(value[key])
+                }
             }
         }
     }
     return bytes
 }
 
-export function arrayCompare<T extends any[] | NodeJS.TypedArray>(
+export function arrayCompare<T extends Array<any> | NodeJS.TypedArray>(
     a: T,
     b: T
 ): number 
@@ -220,15 +214,12 @@ export function arrayCompare<T extends any[] | NodeJS.TypedArray>(
     const minLength = Math.min(a.length, b.length)
     for (let i = 0; i < minLength; i++) 
     {
-        const aElement = a[i]
-        const bElement = b[i]
-        if (aElement < bElement) return -1
-        if (aElement > bElement) return 1
+        if (a[i] < b[i]) return -1
+        if (a[i] > b[i]) return 1
     }
     return a.length - b.length
 }
 
-// Compares x and y lexicographically using a UTF-8 collation
 export function lexicographicCompare(x: string, y: string): number 
 {
     const xEncoded = TextEncoder.encode(x)

@@ -29,26 +29,14 @@ export function createGraphAdapter(
 async function get(db: TGStorage, opts: TGOptionsGet): Promise<TGGraphData> 
 {
     const listOptions = getListOptions(opts)
-
-    if (listOptions) 
-    {
-        return await getList(db, listOptions)
-    }
+    if (listOptions) return await getList(db, listOptions)
 
     const soul = opts && opts['#']
-
     if (isString(soul)) 
     {
         const node = await db.get(soul)
-
-        if (isNode(node)) 
-        {
-            return {
-                [soul]: node
-            }
-        }
+        if (isNode(node)) return { [soul]: node }
     }
-
     return {}
 }
 
@@ -61,14 +49,8 @@ async function getList(
     {
         throw new TypeError('List limit must be positive.')
     }
-    if (isNumber(options['>'])) 
-    {
-        if (isNumber(options['%'])) 
-        {
-            options['%']++
-        }
-    }
 
+    if (isNumber(options['>']) && isNumber(options['%'])) options['%']++
     return await db.list(options)
 }
 
@@ -81,27 +63,18 @@ async function put(
 {
     const diff: TGGraphData = {}
 
-    for (const soul in data) 
-    {
-        if (!soul) 
-        {
-            continue
-        }
-
-        const nodeDiff = await patchGraphFull(
-            db,
-            {
-                [soul]: data[soul]
-            },
-            adapterOptions,
-            crdtOptions
+    const patchPromises = Object.keys(data)
+        .filter(soul => soul)
+        .map(soul =>
+            patchGraphFull(db, { [soul]: data[soul] }, adapterOptions, crdtOptions)
         )
 
-        if (nodeDiff) 
-        {
-            diff[soul] = nodeDiff[soul]
-        }
-    }
+    const patchResults = await Promise.all(patchPromises)
+    patchResults.forEach((nodeDiff, index) => 
+    {
+        if (nodeDiff)
+            diff[Object.keys(data)[index]] = nodeDiff[Object.keys(data)[index]]
+    })
 
     return Object.keys(diff).length ? diff : null
 }
@@ -117,10 +90,7 @@ async function patchGraphFull(
     {
         const patchDiffData = await getPatchDiff(db, data, crdtOptions)
 
-        if (!patchDiffData) 
-        {
-            return null
-        }
+        if (!patchDiffData) return null
         const { diff, toWrite } = patchDiffData
 
         if (await writeRawGraph(db, toWrite, adapterOptions)) 
@@ -146,22 +116,11 @@ async function getPatchDiff(
     const existing = await getExisting(db, data)
     const graphDiff = diffFn(data, existing)
 
-    if (!graphDiff || !Object.keys(graphDiff).length) 
-    {
-        return null
-    }
+    if (!graphDiff || !Object.keys(graphDiff).length) return null
 
-    const existingFromDiff: TGGraphData = {}
-
-    for (const soul in graphDiff) 
-    {
-        if (!soul) 
-        {
-            continue
-        }
-
-        existingFromDiff[soul] = existing[soul]
-    }
+    const existingFromDiff = Object.fromEntries(
+        Object.keys(graphDiff).map(soul => [soul, existing[soul]])
+    )
 
     const updatedGraph = mergeFn(existing, graphDiff, 'mutable')
 
@@ -177,19 +136,10 @@ async function getExisting(
     data: TGGraphData
 ): Promise<TGGraphData> 
 {
-    const existingData: TGGraphData = {}
-
-    for (const soul in data) 
-    {
-        if (!soul) 
-        {
-            continue
-        }
-
-        existingData[soul] = await db.get(soul)
-    }
-
-    return existingData
+    const existingDataEntries = await Promise.all(
+        Object.entries(data).map(async ([soul, _]) => [soul, await db.get(soul)])
+    )
+    return Object.fromEntries(existingDataEntries)
 }
 
 async function writeRawGraph(
@@ -198,24 +148,23 @@ async function writeRawGraph(
     adapterOptions?: TGGraphAdapterOptions
 ): Promise<boolean> 
 {
-    for (const soul in data) 
-    {
-        if (!soul) 
+    const writePromises = Object.entries(data).map(
+        async ([soul, nodeToWrite]) => 
         {
-            continue
+            if (!soul) return
+            if (!nodeToWrite) 
+            {
+                await db.put(soul, null)
+            }
+            else 
+            {
+                assertPutEntry(soul, nodeToWrite, adapterOptions)
+                await db.put(soul, nodeToWrite)
+            }
         }
+    )
 
-        const nodeToWrite = data[soul]
-
-        if (!nodeToWrite) 
-        {
-            await db.put(soul, null)
-            continue
-        }
-
-        assertPutEntry(soul, nodeToWrite, adapterOptions)
-        await db.put(soul, nodeToWrite)
-    }
+    await Promise.all(writePromises)
 
     return true
 }
