@@ -192,7 +192,7 @@
     },
     "lint-staged": {
         "**/*.{ts}": [
-            "pnpm dlx @biomejs/biome check --apply ./src && eslint \"src/**/*.ts\" --fix"
+            "pnpm lint"
         ]
     },
     "simple-git-hooks": {
