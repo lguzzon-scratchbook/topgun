@@ -130,3 +130,7 @@ dist
 
 .idea
 .npmrc
+
+
+# lguzzon
+pnpm-lock.yaml
