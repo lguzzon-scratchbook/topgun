@@ -58,6 +58,44 @@ describe('Client', () =>
         });
     });
 
+    it('save/read boolean', async () =>
+    {
+        client
+            .get('a')
+            .get('b')
+            .put(true, (ack) =>
+            {
+                expect(ack.err).toBeFalsy();
+                client
+                    .get('a')
+                    .get('b')
+                    .once((data) =>
+                    {
+                        expect(data).toBe(true);
+                    });
+            });
+    });
+
+    it('save/read boolean (long path)', async () =>
+    {
+        client
+            .get('a')
+            .get('b')
+            .get('c')
+            .put(true, (ack) =>
+            {
+                expect(ack.err).toBeFalsy();
+                client
+                    .get('a')
+                    .get('b')
+                    .get('c')
+                    .once((data) =>
+                    {
+                        expect(data).toBe(true);
+                    });
+            });
+    });
+
     it('save/read number', async () =>
     {
         client
@@ -72,6 +110,24 @@ describe('Client', () =>
                     .once((data) =>
                     {
                         expect(data).toBe(0);
+                    });
+            });
+    });
+
+    it('save/read string', async () =>
+    {
+        client
+            .get('a')
+            .get('b')
+            .put('test', (ack) =>
+            {
+                expect(ack.err).toBeFalsy();
+                client
+                    .get('a')
+                    .get('b')
+                    .once((data) =>
+                    {
+                        expect(data).toBe('test');
                     });
             });
     });
