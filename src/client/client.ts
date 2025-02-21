@@ -2,6 +2,7 @@ import { AsyncStreamEmitter } from '@topgunbuild/async-stream-emitter'
 import { isObject, isString } from '@topgunbuild/typed'
 import { diffCRDT } from '../crdt'
 import { TGIndexedDBConnector } from '../indexeddb/indexeddb-connector'
+import { TGOPFSConnector } from '../opfs/opfs-connector'
 import { pubFromSoul, unpackGraph } from '../sea'
 import { MAX_KEY_SIZE, MAX_VALUE_SIZE } from '../storage'
 import type { TGNode, TGPeerOptions } from '../types'
@@ -41,6 +42,7 @@ export class TGClient extends AsyncStreamEmitter<any>
             peers                    : [],
             connectors               : [],
             localStorage             : false,
+            localStorageType         : 'INDEXDB',
             localStorageKey          : 'topgun-nodes',
             sessionStorage           : localStorageAdapter,
             sessionStorageKey        : 'topgun-session',
@@ -119,8 +121,11 @@ export class TGClient extends AsyncStreamEmitter<any>
         }
         if (this.options.localStorage) 
         {
+            const ls = this.options.localStorageType || ''
             this.#useConnector(
-                new TGIndexedDBConnector(this.options.localStorageKey, this.options)
+                ls.toUpperCase() === 'OPFS'
+                    ? new TGOPFSConnector(this.options.localStorageKey, this.options)
+                    : new TGIndexedDBConnector(this.options.localStorageKey, this.options)
             )
         }
         if (Array.isArray(this.options.connectors)) 

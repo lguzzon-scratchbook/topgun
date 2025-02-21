@@ -81,6 +81,13 @@
             "require": "./dist/memory-adapter/index.js",
             "types": "./dist/memory-adapter/index.d.ts"
         },
+        "./opfs": {
+            "default": "./dist/opfs/index.mjs",
+            "import": "./dist/opfs/index.mjs",
+            "node": "./dist/opfs/index.js",
+            "require": "./dist/opfs/index.js",
+            "types": "./dist/opfs/index.d.ts"
+        },
         "./package.json": "./package.json",
         "./sea": {
             "default": "./dist/sea/index.mjs",
@@ -140,6 +147,7 @@
         "indexeddb/**",
         "logger/**",
         "memory-adapter/**",
+        "opfs/**",
         "sea/**",
         "server/**",
         "storage/**",
