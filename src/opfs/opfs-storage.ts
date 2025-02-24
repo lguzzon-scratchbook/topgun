@@ -2,6 +2,39 @@ import type { TGStorage } from '../storage'
 import { arrayNodesToObject, filterNodes } from '../storage/utils'
 import type { TGGraphData, TGNode, TGOptionsGet } from '../types'
 
+import memize from 'memize'
+
+const filenameAllowedChars = new Set(
+    'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-'
+)
+
+const hexCharValue = (char: string): string => 
+{
+    return char.codePointAt(0)!.toString(16)
+}
+const hexCharValueM = memize(hexCharValue, { maxSize: 1000 }) as (
+    char: string
+) => string
+
+const key2Filename = (key: string) => 
+{
+    const chars2Change = new Set<string>()
+    for (const char of key) 
+    {
+        if (!filenameAllowedChars.has(char)) 
+        {
+            chars2Change.add(char)
+        }
+    }
+    for (const char of chars2Change) 
+    {
+        key = key.replaceAll(char, hexCharValueM(char))
+    }
+    return key
+}
+
+const key2FilenameM = memize(key2Filename, { maxSize: 1000 })
+
 export class OPFSStorage implements TGStorage 
 {
     private _root: FileSystemDirectoryHandle
@@ -69,22 +102,17 @@ export class OPFSStorage implements TGStorage
         options?: { create?: boolean }
     ): Promise<FileSystemFileHandle> 
     {
+        const keyFilename = key2FilenameM(key)
         try 
         {
-            return await this._root.getFileHandle(
-                key.replace(/[^a-zA-Z0-9_.-]/g, '_'),
-                options
-            )
+            return await this._root.getFileHandle(keyFilename, options)
         }
         catch (error) 
         {
             if (error instanceof TypeError && !this._root) 
             {
                 await this.#init()
-                return await this._root.getFileHandle(
-                    key.replace(/[^a-zA-Z0-9_.-]/g, '_'),
-                    options
-                )
+                return await this._root.getFileHandle(keyFilename, options)
             }
             throw error
         }

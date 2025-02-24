@@ -9,7 +9,8 @@
         "@topgunbuild/socket": "^0.0.5",
         "@topgunbuild/textencoder": "^0.0.3",
         "@topgunbuild/typed": "^0.1.0",
-        "@topgunbuild/webcrypto": "^0.0.1"
+        "@topgunbuild/webcrypto": "^0.0.1",
+        "memize": "^2.1.0"
     },
     "description": "Realtime, offline-first, secure, graph data synchronization engine. Reimplementation of gunDB in TypeScript",
     "devDependencies": {
